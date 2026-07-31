@@ -3,362 +3,811 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Coleta Ambiental</title>
+    <title>Coleta de Campo – Bezerra Ambiental</title>
     <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        input, select, textarea { font-size: 16px; }
-        .tab-content { display: none; animation: fadeIn 0.3s ease-out; }
-        .tab-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .brand-blue { background-color: #0369a1; } 
-        .brand-green { background-color: #0d9488; } 
-        .text-brand-green { color: #0d9488; }
-        .border-brand-green { border-color: #0d9488; }
+    
+    <!-- Bibliotecas para Gerar PDF Offline -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
-        /* Toast Notification */
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        'bezerra-verde': '#2E7D32',
+                        'bezerra-azul': '#1565C0',
+                        'solo-marrom': '#8D6E63',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #F3F4F6; -webkit-tap-highlight-color: transparent; }
+        .tela { display: none; animation: fadeIn 0.3s ease; }
+        .tela.active { display: block; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .input-field {
+            width: 100%; padding: 0.85rem; margin-top: 0.25rem;
+            border: 1px solid #D1D5DB; border-radius: 0.5rem; outline: none; background: #fff;
+            color: #1F2937; transition: border-color 0.2s, box-shadow 0.2s; font-size: 16px;
+        }
+        .input-field:focus { border-color: #2E7D32; box-shadow: 0 0 0 2px rgba(46,125,50,0.2); }
+        .input-field.azul:focus { border-color: #1565C0; box-shadow: 0 0 0 2px rgba(21,101,192,0.2); }
+        .input-field.marrom:focus { border-color: #8D6E63; box-shadow: 0 0 0 2px rgba(141,110,99,0.2); }
+
         #toast {
             visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
-            text-align: center; border-radius: 8px; padding: 16px; position: fixed;
+            text-align: center; border-radius: 8px; padding: 12px; position: fixed;
             z-index: 100; left: 50%; bottom: 30px; transform: translateX(-50%);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2); font-weight: bold; font-size: 14px;
         }
-        #toast.show {
-            visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s;
-        }
+        #toast.show { visibility: visible; animation: fadein 0.4s, fadeout 0.4s 2.5s; }
         @keyframes fadein { from { bottom: 0; opacity: 0; } to { bottom: 30px; opacity: 1; } }
         @keyframes fadeout { from { bottom: 30px; opacity: 1; } to { bottom: 0; opacity: 0; } }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans min-h-screen antialiased">
+<body class="text-gray-800 antialiased font-sans pb-20 flex flex-col min-h-screen">
 
-    <!-- Header -->
-    <header class="brand-blue p-4 shadow-md flex justify-between items-center text-white sticky top-0 z-50">
-        <div>
-            <h1 class="text-xl font-bold tracking-wide">Coleta Ambiental</h1>
-            <p class="text-xs text-blue-200">Sistema Autônomo de Campo</p>
+    <!-- Cabeçalho -->
+    <header class="bg-gradient-to-r from-bezerra-verde to-bezerra-azul text-white shadow-md sticky top-0 z-50">
+        <div class="p-4 flex justify-between items-center max-w-lg mx-auto w-full">
+            <div>
+                <h1 class="text-xl font-bold tracking-wide">🌿 BEZERRA AMBIENTAL</h1>
+                <p id="headerSubtitle" class="text-xs opacity-90 font-medium">Histórico de Projetos</p>
+            </div>
+            <button id="btnVoltarLobby" onclick="irParaLobby()" class="hidden text-sm font-bold bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded transition">🏠 MENU</button>
         </div>
-        <div id="status-icon" class="w-3 h-3 bg-green-400 rounded-full shadow-[0_0_8px_#4ade80]" title="Sistema Operante"></div>
+        <nav id="navTabs" class="hidden flex overflow-x-auto bg-white text-sm font-bold shadow-inner border-b border-gray-200 max-w-lg mx-auto w-full">
+            <button onclick="mudarAba('abaProjeto')" id="btn-abaProjeto" class="flex-1 py-3 px-2 text-bezerra-verde border-b-4 border-bezerra-verde transition whitespace-nowrap">PROJETO</button>
+            <button onclick="mudarAba('abaPM')" id="btn-abaPM" class="flex-1 py-3 px-2 text-gray-400 border-b-4 border-transparent transition whitespace-nowrap hover:text-bezerra-azul">+ PM</button>
+            <button onclick="mudarAba('abaSondagem')" id="btn-abaSondagem" class="flex-1 py-3 px-2 text-gray-400 border-b-4 border-transparent transition whitespace-nowrap hover:text-solo-marrom">+ SONDAGEM</button>
+            <button onclick="mudarAba('abaExportar')" id="btn-abaExportar" class="flex-1 py-3 px-2 text-gray-400 border-b-4 border-transparent transition whitespace-nowrap hover:text-gray-800">EXPORTAR</button>
+        </nav>
     </header>
 
-    <!-- Abas -->
-    <div class="flex bg-white shadow-sm border-b border-gray-200 sticky top-[68px] z-40">
-        <button onclick="openTab('tab-projeto')" id="btn-tab-projeto" class="flex-1 py-3 text-sm font-bold text-gray-400 border-b-4 border-transparent transition-colors">PROJETO</button>
-        <button onclick="openTab('tab-poco')" id="btn-tab-poco" class="flex-1 py-3 text-sm font-bold text-gray-400 border-b-4 border-transparent transition-colors">PM (ÁGUA)</button>
-        <button onclick="openTab('tab-sondagem')" id="btn-tab-sondagem" class="flex-1 py-3 text-sm font-bold text-gray-400 border-b-4 border-transparent transition-colors">SONDAGEM</button>
-    </div>
+    <main class="p-4 max-w-lg mx-auto w-full flex-grow">
 
-    <main class="p-4 pb-24 max-w-2xl mx-auto">
+        <!-- Imagem escondida para o PDF -->
+        <img id="logoImg" src="icon.png" style="display:none;" crossorigin="anonymous">
 
-        <!-- ABA PROJETO -->
-        <section id="tab-projeto" class="tab-content active space-y-5">
-            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
-                    Informações do Projeto
-                </h2>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-600 mb-1">Nome do Projeto / Cliente *</label>
-                        <input type="text" id="proj-nome" class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600" placeholder="Ex: Indústria XYZ" oninput="salvarProjeto()">
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-600 mb-1">Data</label>
-                            <input type="date" id="proj-data" class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600" oninput="salvarProjeto()">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-600 mb-1">Técnico</label>
-                            <input type="text" id="proj-tecnico" class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600" placeholder="Nome" oninput="salvarProjeto()">
-                        </div>
-                    </div>
-                </div>
+        <!-- TELA 1: LOBBY (MENU INICIAL) -->
+        <section id="telaLobby" class="tela active space-y-4">
+            
+            <!-- LOGO NA TELA INICIAL -->
+            <div class="flex justify-center py-4">
+                <img src="icon.png" alt="Bezerra Ambiental" class="w-32 h-32 object-contain rounded-2xl shadow-sm bg-white p-2" onerror="this.style.display='none'">
             </div>
 
-            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                <div class="flex justify-between items-center mb-4 border-b pb-2">
-                    <h2 class="text-lg font-bold text-gray-800">Registros Coletados</h2>
-                    <span id="badge-count" class="bg-teal-100 text-teal-800 text-xs font-bold px-2 py-1 rounded-full">0 itens</span>
+            <button onclick="novoProjeto()" class="w-full bg-bezerra-verde text-white font-bold py-4 rounded-xl shadow hover:bg-green-800 transition flex items-center justify-center gap-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                INICIAR NOVO PROJETO
+            </button>
+            <div class="mt-6">
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Histórico de Projetos Salvos</h2>
+                <div id="listaProjetos" class="space-y-3">
+                    <!-- Preenchido via JS -->
                 </div>
-                <ul id="lista-registros" class="space-y-2 empty:hidden"></ul>
-                <p id="msg-vazio" class="text-sm text-gray-400 italic text-center py-4">Nenhum registro adicionado ainda.</p>
-            </div>
-
-            <div class="space-y-3 pt-2">
-                <button onclick="abrirModalExportacao()" class="w-full brand-green hover:bg-teal-700 text-white font-bold py-4 rounded-xl shadow-md transition-colors text-lg flex justify-center items-center gap-2">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                    Encerrar e Exportar
-                </button>
-                <button onclick="limparProjeto()" class="w-full bg-white border border-red-200 text-red-500 font-bold py-3 rounded-xl transition-colors hover:bg-red-50">
-                    Limpar Projeto Atual
-                </button>
             </div>
         </section>
 
-        <!-- ABA PM (ÁGUA) -->
-        <section id="tab-poco" class="tab-content space-y-5">
-            <div class="bg-blue-50 border border-blue-200 p-5 rounded-xl shadow-sm">
-                <div class="flex items-center gap-2 border-b border-blue-200 pb-3 mb-4">
-                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                    <h2 class="text-lg font-bold text-blue-900">Novo Poço de Monitoramento</h2>
-                </div>
-                <form id="form-pm" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-blue-900 mb-1">ID do Poço *</label>
-                        <input type="text" name="id" required class="w-full border border-blue-300 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Ex: PM-01">
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
+        <!-- TELA 2: PROJETO ATUAL -->
+        <section id="telaProjeto" class="tela">
+
+            <!-- ABA DADOS DO PROJETO -->
+            <div id="abaProjeto" class="tab-content active space-y-4">
+                <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-bezerra-verde">
+                    <h2 class="text-lg font-bold text-gray-800 mb-3 border-b border-gray-100 pb-2">Informações do Projeto</h2>
+                    
+                    <form id="formProjeto" class="space-y-3">
                         <div>
-                            <label class="block text-sm font-semibold text-blue-900 mb-1">Profundidade (m) *</label>
-                            <input type="number" inputmode="decimal" step="0.01" name="profundidade" required class="w-full border border-blue-300 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="0.00">
+                            <label class="block text-sm font-semibold text-gray-700">Nome do Projeto / Cliente *</label>
+                            <input type="text" id="projNome" class="input-field" placeholder="Ex: Indústria XYZ" onchange="salvarCapaProjeto()">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-blue-900 mb-1">Nível d'Água (m) *</label>
-                            <input type="number" inputmode="decimal" step="0.01" name="nivel" required class="w-full border border-blue-300 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="0.00">
+                            <label class="block text-sm font-semibold text-gray-700">Número do Projeto</label>
+                            <input type="text" id="projNumero" class="input-field" placeholder="Ex: 123/2023" onchange="salvarCapaProjeto()">
                         </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-blue-900 mb-1">Fase Livre (cm)</label>
-                        <input type="number" inputmode="decimal" step="0.1" name="lnapl" class="w-full border border-blue-300 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Deixe vazio se não houver">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-blue-900 mb-1">Observações</label>
-                        <textarea name="observacao" class="w-full border border-blue-300 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Detalhes..."></textarea>
-                    </div>
-                    <button type="button" onclick="salvarRegistro('form-pm', 'PM')" class="w-full brand-blue hover:bg-blue-800 text-white font-bold py-4 rounded-xl shadow-md transition-colors mt-4">
-                        + Salvar Poço
-                    </button>
-                </form>
-            </div>
-        </section>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700">Data</label>
+                                <input type="date" id="projData" class="input-field" onchange="salvarCapaProjeto()">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700">Técnico</label>
+                                <input type="text" id="projTecnico" class="input-field" placeholder="Seu nome" onchange="salvarCapaProjeto()">
+                            </div>
+                        </div>
+                    </form>
 
-        <!-- ABA SONDAGEM -->
-        <section id="tab-sondagem" class="tab-content space-y-5">
-            <div class="bg-amber-50 border border-amber-200 p-5 rounded-xl shadow-sm">
-                <div class="flex items-center gap-2 border-b border-amber-200 pb-3 mb-4">
-                    <svg class="w-6 h-6 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                    <h2 class="text-lg font-bold text-amber-900">Nova Sondagem</h2>
+                    <!-- Resumo dos Registros Cadastrados -->
+                    <div class="mt-8">
+                        <div class="flex justify-between items-center mb-3 border-b border-gray-100 pb-1">
+                            <h3 class="font-bold text-sm text-gray-600 uppercase">Registros Coletados</h3>
+                            <span class="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600 font-bold" id="contadorRegistros">0 itens</span>
+                        </div>
+                        <div id="listaRegistros" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+                    </div>
                 </div>
-                <form id="form-sondagem" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-amber-900 mb-1">ID da Sondagem *</label>
-                        <input type="text" name="id" required class="w-full border border-amber-300 rounded-lg px-4 py-3 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600" placeholder="Ex: SP-01">
+            </div>
+
+            <!-- ABA PM (ÁGUA) -->
+            <div id="abaPM" class="tab-content space-y-4">
+                <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-bezerra-azul relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-16 h-16 bg-blue-50 rounded-bl-full -z-0"></div>
+                    <div class="flex items-center gap-2 mb-4 relative z-10">
+                        <h2 class="text-lg font-bold text-bezerra-azul" id="tituloAbaPM">Adicionar Poço (PM)</h2>
                     </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-amber-900 mb-1">Profundidade Total (m) *</label>
-                        <input type="number" inputmode="decimal" step="0.01" name="profundidade" required class="w-full border border-amber-300 rounded-lg px-4 py-3 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600" placeholder="0.00">
+                    
+                    <form id="formPM" class="relative z-10 space-y-3">
+                        <input type="hidden" id="pmIndex">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">ID do Poço *</label>
+                            <input type="text" id="pmId" required placeholder="Ex: PM-01" class="input-field azul">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700">Nível d'Água (m) *</label>
+                                <input type="text" inputmode="decimal" id="pmNA" required placeholder="0,00" class="input-field azul">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700">Profundidade (m) *</label>
+                                <input type="text" inputmode="decimal" id="pmProf" required placeholder="0,00" class="input-field azul">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Fase Livre (cm)</label>
+                            <input type="text" inputmode="decimal" id="pmFase" placeholder="Opcional" class="input-field azul">
+                        </div>
+                        
+                        <!-- Checkbox Fotografia -->
+                        <div class="pt-3 pb-1 border-t border-gray-100 mt-2">
+                            <label class="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
+                                <input type="checkbox" id="pmFoto" class="w-5 h-5 text-bezerra-azul rounded border-gray-300 focus:ring-bezerra-azul">
+                                Registro fotográfico realizado?
+                            </label>
+                            <p class="text-[11px] text-gray-400 mt-1 italic">(Enviar Fotos Posteriormente via Google Drive Indicado)</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Observações</label>
+                            <textarea id="pmObs" rows="2" placeholder="Odores, cor, avarias..." class="input-field azul resize-none"></textarea>
+                        </div>
+                        
+                        <div class="flex gap-2 pt-2">
+                            <button type="button" onclick="cancelarEdicao('PM')" id="btnCancelaPM" class="hidden w-1/3 bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition">Cancelar</button>
+                            <button type="button" onclick="salvarPM()" id="btnSalvaPM" class="w-full bg-bezerra-azul hover:bg-blue-800 text-white font-bold py-4 rounded-xl shadow-md transition">Salvar Poço</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ABA SONDAGEM (TERRA) -->
+            <div id="abaSondagem" class="tab-content space-y-4">
+                <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-solo-marrom relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-16 h-16 bg-orange-50 rounded-bl-full -z-0"></div>
+                    <div class="flex items-center gap-2 mb-4 relative z-10">
+                        <h2 class="text-lg font-bold text-solo-marrom" id="tituloAbaSond">Nova Sondagem</h2>
                     </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-amber-900 mb-1">Perfil Litoestratigráfico</label>
-                        <textarea name="observacao" class="w-full border border-amber-300 rounded-lg px-4 py-3 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600" placeholder="Ex: 0-2m Aterro; 2-4m Argila siltosa..."></textarea>
+                    
+                    <form id="formSondagem" class="relative z-10 space-y-3">
+                        <input type="hidden" id="sondIndex">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">ID da Sondagem *</label>
+                            <input type="text" id="sondId" required placeholder="Ex: SP-01" class="input-field marrom">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Profundidade Total (m) *</label>
+                            <input type="text" inputmode="decimal" id="sondProfTotal" required placeholder="0,00" class="input-field marrom">
+                        </div>
+                        
+                        <h3 class="font-bold text-xs text-gray-500 uppercase mt-5 border-b border-gray-200 pb-1">Perfil Litoestratigráfico</h3>
+                        <div id="containerCamadas" class="space-y-3 mt-2"></div>
+                        <button type="button" onclick="adicionarCamada()" class="w-full mt-2 border border-dashed border-solo-marrom text-solo-marrom font-bold py-2.5 rounded-lg hover:bg-orange-50 transition text-sm">+ Adicionar Camada</button>
+
+                        <!-- Checkbox Fotografia -->
+                        <div class="pt-3 pb-1 border-t border-gray-100 mt-4">
+                            <label class="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
+                                <input type="checkbox" id="sondFoto" class="w-5 h-5 text-solo-marrom rounded border-gray-300 focus:ring-solo-marrom">
+                                Registro fotográfico do solo realizado?
+                            </label>
+                            <p class="text-[11px] text-gray-400 mt-1 italic">(Enviar Fotos Posteriormente via Google Drive Indicado)</p>
+                        </div>
+
+                        <div class="mt-2">
+                            <label class="block text-sm font-semibold text-gray-700">Observações Gerais</label>
+                            <textarea id="sondObs" rows="2" placeholder="Observações..." class="input-field marrom resize-none"></textarea>
+                        </div>
+                        
+                        <div class="flex gap-2 pt-2">
+                            <button type="button" onclick="cancelarEdicao('Sondagem')" id="btnCancelaSond" class="hidden w-1/3 bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition">Cancelar</button>
+                            <button type="button" onclick="salvarSondagem()" id="btnSalvaSond" class="w-full bg-solo-marrom text-white font-bold py-4 rounded-xl shadow-md hover:bg-yellow-900 transition">Salvar Sondagem</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ABA EXPORTAR -->
+            <div id="abaExportar" class="tab-content space-y-4">
+                <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-gray-400 text-center">
+                    <h2 class="text-xl font-bold text-gray-800 mb-2">Finalizar e Exportar</h2>
+                    <p class="text-sm text-gray-500 mb-6">Escolha o canal para enviar os dados deste projeto.</p>
+                    
+                    <div class="space-y-3">
+                        <button onclick="gerarPDF()" class="w-full bg-red-600 text-white font-bold py-4 rounded-xl shadow hover:bg-red-700 transition flex justify-center items-center gap-2">
+                            📄 Gerar Relatório em PDF
+                        </button>
+                        
+                        <button onclick="exportarCSV()" class="w-full bg-bezerra-verde text-white font-bold py-4 rounded-xl shadow hover:bg-green-800 transition flex justify-center items-center gap-2">
+                            📊 Baixar Planilha (Excel)
+                        </button>
+                        
+                        <button onclick="exportarWhatsApp()" class="w-full bg-[#25D366] text-white font-bold py-4 rounded-xl shadow hover:bg-green-600 transition flex justify-center items-center gap-2">
+                            💬 Enviar Resumo via WhatsApp
+                        </button>
                     </div>
-                    <button type="button" onclick="salvarRegistro('form-sondagem', 'Sondagem')" class="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold py-4 rounded-xl shadow-md transition-colors mt-4">
-                        + Salvar Sondagem
-                    </button>
-                </form>
+
+                    <div class="mt-8 pt-5 border-t border-gray-200">
+                        <button onclick="excluirProjetoAtual()" class="w-full text-red-500 hover:bg-red-50 font-bold text-sm py-3 rounded-lg border border-red-200 transition">Excluir Projeto Definitivamente</button>
+                    </div>
+                </div>
             </div>
         </section>
-
     </main>
 
-    <!-- MODAL DE EXPORTAÇÃO -->
-    <div id="modal-export" class="fixed inset-0 bg-slate-900/80 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative">
-            <button onclick="fecharModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
-            <h2 class="text-xl font-bold text-gray-800 mb-2">Exportar Projeto</h2>
-            <p class="text-sm text-gray-500 mb-6">Como deseja enviar os dados consolidados?</p>
-            
-            <div class="space-y-3">
-                <button onclick="exportarCSV()" class="w-full brand-blue text-white font-bold py-3.5 rounded-xl shadow-md hover:bg-blue-800 transition-colors">(Salvar)</button>
-                <button onclick="exportarWhatsApp()" class="w-full bg-[#25D366] text-white font-bold py-3.5 rounded-xl shadow-md hover:bg-green-600 transition-colors">(Enviar via Whatsapp)</button>
-                <button onclick="exportarEmail()" class="w-full bg-gray-700 text-white font-bold py-3.5 rounded-xl shadow-md hover:bg-gray-800 transition-colors">(Enviar via Email)</button>
-                <button onclick="salvarDrive()" class="w-full bg-white border border-gray-300 text-gray-700 font-bold py-3.5 rounded-xl shadow-sm hover:bg-gray-50 transition-colors flex justify-center items-center gap-2">
-                    <svg class="w-5 h-5" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#FFC107" d="M17 6l-11.4 20h15.6l11.4-20z"/><path fill="#1976D2" d="M38.4 42H15.6L4.2 22.1l11.4-19.8 11.4 19.8z"/><path fill="#4CAF50" d="M43.8 22.1L32.4 2.3 21 22.1l11.4 19.9z"/></svg>
-                    (Salvar no Google Drive)
-                </button>
-            </div>
-        </div>
-    </div>
+    <!-- Rodapé -->
+    <footer class="text-center text-[10px] text-gray-400 py-4 max-w-lg mx-auto w-full">
+        Todos os direitos reservados à Bezerra Ambiental (29.165.656/0001-46) e Bruno Bezerra.
+    </footer>
 
-    <!-- TOAST NOTIFICATION -->
-    <div id="toast">Registro salvo com sucesso!</div>
+    <div id="toast">Ação realizada com sucesso!</div>
 
     <script>
-        const STORAGE_KEY = 'bezerra_data_v1';
-        let projetoData = { nome: '', data: '', tecnico: '', registros: [] };
+        // ========== BANCO DE DADOS LOCAL ==========
+        let projetos = JSON.parse(localStorage.getItem('GeoColeta_Projetos_v2')) || [];
+        let projetoAtualId = null;
 
-        document.addEventListener('DOMContentLoaded', () => {
-            if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-            carregarProjeto();
-            openTab('tab-projeto');
-        });
-
-        function showToast(msg) {
-            const toast = document.getElementById("toast");
-            toast.innerText = msg;
-            toast.className = "show";
-            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
-        }
-
-        function openTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-
-            const btns = ['btn-tab-projeto', 'btn-tab-poco', 'btn-tab-sondagem'];
-            btns.forEach(id => {
-                const btn = document.getElementById(id);
-                btn.classList.remove('text-brand-green', 'border-brand-green');
-                btn.classList.add('text-gray-400', 'border-transparent');
-            });
-
-            const activeBtn = document.getElementById('btn-' + tabId);
-            activeBtn.classList.remove('text-gray-400', 'border-transparent');
-            activeBtn.classList.add('text-brand-green', 'border-brand-green');
-        }
-
-        function carregarProjeto() {
-            const salvo = localStorage.getItem(STORAGE_KEY);
-            if (salvo) {
-                projetoData = JSON.parse(salvo);
-                document.getElementById('proj-nome').value = projetoData.nome || '';
-                document.getElementById('proj-data').value = projetoData.data || '';
-                document.getElementById('proj-tecnico').value = projetoData.tecnico || '';
+        window.onload = () => {
+            renderizarLobby();
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW falhou', err));
             }
-            atualizarLista();
+        };
+
+        function showToast(mensagem) {
+            const toast = document.getElementById("toast");
+            toast.innerText = mensagem;
+            toast.className = "show";
+            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 2900);
         }
 
-        function salvarProjeto() {
-            projetoData.nome = document.getElementById('proj-nome').value;
-            projetoData.data = document.getElementById('proj-data').value;
-            projetoData.tecnico = document.getElementById('proj-tecnico').value;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(projetoData));
+        // Função para converter logo em Base64 para o PDF
+        function getBase64Image(imgId) {
+            var img = document.getElementById(imgId);
+            var canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            var ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+            return canvas.toDataURL("image/png");
         }
 
-        function salvarRegistro(formId, tipo) {
-            const form = document.getElementById(formId);
-            const fd = new FormData(form);
-            const dataObj = Object.fromEntries(fd.entries());
-            
-            if(!dataObj.id || !dataObj.profundidade) {
-                alert("Obrigatório informar ID e Profundidade.");
+        // ========== LOBBY E PROJETOS ==========
+        function renderizarLobby() {
+            document.getElementById('telaProjeto').classList.remove('active');
+            document.getElementById('telaLobby').classList.add('active');
+            document.getElementById('btnVoltarLobby').classList.add('hidden');
+            document.getElementById('navTabs').classList.add('hidden');
+            document.getElementById('headerSubtitle').innerText = 'Histórico de Projetos';
+
+            const lista = document.getElementById('listaProjetos');
+            if (projetos.length === 0) {
+                lista.innerHTML = '<p class="text-gray-400 text-center text-sm py-4 bg-white rounded-lg border border-dashed">Nenhum projeto no histórico.</p>';
                 return;
             }
 
-            dataObj.tipo = tipo;
-            projetoData.registros.push(dataObj);
-            
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(projetoData));
-            form.reset();
-            atualizarLista();
-            showToast(`${tipo} salvo com sucesso!`);
-        }
-
-        function excluirRegistro(index) {
-            if(confirm('Excluir item?')) {
-                projetoData.registros.splice(index, 1);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(projetoData));
-                atualizarLista();
-            }
-        }
-
-        function limparProjeto() {
-            if(confirm('Apagar TODO o projeto atual e seus registros permanentemente?')) {
-                projetoData = { nome: '', data: '', tecnico: '', registros: [] };
-                localStorage.removeItem(STORAGE_KEY);
-                document.getElementById('proj-nome').value = '';
-                document.getElementById('proj-data').value = '';
-                document.getElementById('proj-tecnico').value = '';
-                atualizarLista();
-            }
-        }
-
-        function atualizarLista() {
-            const lista = document.getElementById('lista-registros');
-            const msgVazio = document.getElementById('msg-vazio');
-            document.getElementById('badge-count').innerText = `${projetoData.registros.length} itens`;
-            
-            lista.innerHTML = '';
-            if (projetoData.registros.length === 0) {
-                msgVazio.style.display = 'block';
-            } else {
-                msgVazio.style.display = 'none';
-                projetoData.registros.forEach((reg, idx) => {
-                    const tagClass = reg.tipo === 'PM' ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-amber-100 text-amber-800 border-amber-200';
-                    const li = document.createElement('li');
-                    li.className = "flex justify-between items-center bg-white p-3 rounded-lg border border-gray-200 shadow-sm";
-                    li.innerHTML = `
-                        <div class="text-sm text-gray-700 font-medium">
-                            <span class="${tagClass} border px-2 py-0.5 rounded text-xs mr-2 font-bold">${reg.tipo}</span>
-                            ${reg.id} <span class="text-gray-400 font-normal ml-1">(${reg.profundidade}m)</span>
+            lista.innerHTML = projetos.map(p => `
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 border-l-4 border-l-bezerra-verde transition">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-lg">${p.nome || 'Sem Nome'}</h3>
+                            <p class="text-xs text-gray-400 mt-0.5">Nº: ${p.numero || '--'} | Data: ${p.data || '--'}</p>
+                            <p class="text-xs font-semibold text-gray-500 mt-2 uppercase tracking-wide">
+                                <span class="text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">💧 ${p.pms.length} PM</span> &nbsp;
+                                <span class="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">🕳️ ${p.sondagens.length} SOND</span>
+                            </p>
                         </div>
-                        <button onclick="excluirRegistro(${idx})" class="text-red-400 hover:text-red-600 px-2 py-1 bg-red-50 rounded transition-colors">&times;</button>
-                    `;
-                    lista.appendChild(li);
+                        <button onclick="excluirProjeto(${p.id})" class="text-red-400 hover:bg-red-50 p-2 rounded-full" title="Excluir Projeto">🗑️</button>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-gray-100">
+                        <button onclick="abrirProjeto(${p.id})" class="w-full text-sm font-bold text-bezerra-verde hover:bg-green-50 py-2 rounded">Abrir Projeto →</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function novoProjeto() {
+            const nome = prompt('Digite o nome ou cliente do Novo Projeto:');
+            if (!nome || !nome.trim()) return;
+            const novo = {
+                id: Date.now(),
+                nome: nome.trim(),
+                numero: '',
+                data: new Date().toLocaleDateString('pt-BR'),
+                tecnico: '',
+                pms: [],
+                sondagens: []
+            };
+            projetos.unshift(novo);
+            salvarBanco();
+            abrirProjeto(novo.id);
+        }
+
+        function excluirProjeto(id) {
+            if(confirm("ATENÇÃO: Apagar este projeto e todos os seus dados definitivamente?")) {
+                projetos = projetos.filter(p => p.id !== id);
+                salvarBanco();
+                renderizarLobby();
+            }
+        }
+
+        function abrirProjeto(id) {
+            projetoAtualId = id;
+            const p = projetos.find(x => x.id === projetoAtualId);
+            
+            document.getElementById('projNome').value = p.nome;
+            document.getElementById('projNumero').value = p.numero || '';
+            
+            // Formatando data pro input type="date" caso seja necessário
+            let dataInput = p.data;
+            if(dataInput && dataInput.includes('/')) {
+                const parts = dataInput.split('/');
+                dataInput = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+            document.getElementById('projData').value = dataInput || '';
+            document.getElementById('projTecnico').value = p.tecnico || '';
+
+            document.getElementById('telaLobby').classList.remove('active');
+            document.getElementById('telaProjeto').classList.add('active');
+            document.getElementById('btnVoltarLobby').classList.remove('hidden');
+            document.getElementById('navTabs').classList.remove('hidden');
+            document.getElementById('navTabs').classList.add('flex');
+            
+            mudarAba('abaProjeto');
+            atualizarDashboard();
+        }
+
+        function irParaLobby() {
+            salvarCapaProjeto(); 
+            projetoAtualId = null;
+            renderizarLobby();
+        }
+
+        function salvarCapaProjeto() {
+            const p = projetos.find(x => x.id === projetoAtualId);
+            if(p) {
+                p.nome = document.getElementById('projNome').value;
+                p.numero = document.getElementById('projNumero').value;
+                // Salvar data no formato BR se vier do input
+                const dataRaw = document.getElementById('projData').value;
+                if(dataRaw) {
+                    const d = new Date(dataRaw);
+                    p.data = new Date(d.getTime() + d.getTimezoneOffset() * 60000).toLocaleDateString('pt-BR');
+                }
+                p.tecnico = document.getElementById('projTecnico').value;
+                salvarBanco();
+            }
+        }
+
+        function salvarBanco() {
+            localStorage.setItem('GeoColeta_Projetos_v2', JSON.stringify(projetos));
+        }
+
+        // ========== NAVEGAÇÃO DE ABAS ==========
+        function mudarAba(abaId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(abaId).classList.add('active');
+            
+            document.querySelectorAll('#navTabs button').forEach(btn => {
+                btn.classList.remove('text-bezerra-verde', 'border-bezerra-verde', 'border-bezerra-azul', 'border-solo-marrom', 'text-gray-800');
+                btn.classList.add('text-gray-400', 'border-transparent');
+            });
+            
+            const btnAtivo = document.getElementById('btn-' + abaId);
+            if (btnAtivo) {
+                btnAtivo.classList.remove('text-gray-400', 'border-transparent');
+                if(abaId === 'abaPM') btnAtivo.classList.add('text-bezerra-azul', 'border-bezerra-azul');
+                else if(abaId === 'abaSondagem') btnAtivo.classList.add('text-solo-marrom', 'border-solo-marrom');
+                else if(abaId === 'abaExportar') btnAtivo.classList.add('text-gray-800', 'border-gray-800');
+                else btnAtivo.classList.add('text-bezerra-verde', 'border-bezerra-verde');
+            }
+        }
+
+        // ========== GESTÃO DE REGISTROS (RESUMO) ==========
+        function atualizarDashboard() {
+            const p = projetos.find(x => x.id === projetoAtualId);
+            document.getElementById('headerSubtitle').innerText = p.nome || 'Projeto';
+            
+            const total = p.pms.length + p.sondagens.length;
+            document.getElementById('contadorRegistros').innerText = `${total} Itens`;
+
+            let html = '';
+            p.pms.forEach((item, i) => {
+                html += `
+                <div class="bg-gray-50 border border-gray-200 border-l-4 border-l-bezerra-azul p-3 rounded flex justify-between items-center mb-2">
+                    <div><strong class="text-blue-900">${item.id}</strong> <span class="text-gray-500 text-xs ml-1">Prof: ${item.prof}m | NE: ${item.na}m | Foto: ${item.fotografia}</span></div> 
+                    <div>
+                        <button type="button" onclick="editarRegistro('PM', ${i})" class="text-blue-500 text-xs font-bold mr-2 uppercase">Editar</button>
+                        <button type="button" onclick="removerRegistro('pms', ${i})" class="text-red-500 font-bold px-1">X</button>
+                    </div>
+                </div>`;
+            });
+            p.sondagens.forEach((item, i) => {
+                html += `
+                <div class="bg-gray-50 border border-gray-200 border-l-4 border-l-solo-marrom p-3 rounded flex justify-between items-center mb-2">
+                    <div><strong class="text-amber-900">${item.id}</strong> <span class="text-gray-500 text-xs ml-1">Prof: ${item.profTotal}m | Foto: ${item.fotografia}</span></div> 
+                    <div>
+                        <button type="button" onclick="editarRegistro('Sondagem', ${i})" class="text-amber-700 text-xs font-bold mr-2 uppercase">Editar</button>
+                        <button type="button" onclick="removerRegistro('sondagens', ${i})" class="text-red-500 font-bold px-1">X</button>
+                    </div>
+                </div>`;
+            });
+            
+            document.getElementById('listaRegistros').innerHTML = html || '<p class="text-gray-400 text-xs text-center py-4">Nenhum PM ou Sondagem registrado.</p>';
+        }
+
+        function removerRegistro(tipo, index) {
+            if (!confirm('Excluir permanentemente este registro?')) return;
+            const p = projetos.find(x => x.id === projetoAtualId);
+            p[tipo].splice(index, 1);
+            salvarBanco();
+            atualizarDashboard();
+            showToast("Excluído com sucesso.");
+        }
+
+        function excluirProjetoAtual() {
+            if (!confirm('ATENÇÃO: Deseja EXCLUIR DEFINITIVAMENTE este projeto e todos os seus registros?')) return;
+            projetos = projetos.filter(x => x.id !== projetoAtualId);
+            salvarBanco();
+            irParaLobby();
+            showToast("Projeto deletado.");
+        }
+
+        // ========== EDIÇÃO DE REGISTROS ==========
+        function editarRegistro(tipo, index) {
+            const p = projetos.find(x => x.id === projetoAtualId);
+            
+            if (tipo === 'PM') {
+                const item = p.pms[index];
+                document.getElementById('pmIndex').value = index;
+                document.getElementById('pmId').value = item.id;
+                document.getElementById('pmNA').value = item.na;
+                document.getElementById('pmProf').value = item.prof;
+                document.getElementById('pmFase').value = item.fase === '-' ? '' : item.fase;
+                document.getElementById('pmObs').value = item.obs === '-' ? '' : item.obs;
+                document.getElementById('pmFoto').checked = item.fotografia === 'Sim';
+                
+                document.getElementById('tituloAbaPM').innerText = "Editar Poço (PM)";
+                document.getElementById('btnSalvaPM').innerText = "Atualizar Poço";
+                document.getElementById('btnCancelaPM').classList.remove('hidden');
+                mudarAba('abaPM');
+            } 
+            else if (tipo === 'Sondagem') {
+                const item = p.sondagens[index];
+                document.getElementById('sondIndex').value = index;
+                document.getElementById('sondId').value = item.id;
+                document.getElementById('sondProfTotal').value = item.profTotal;
+                document.getElementById('sondObs').value = item.obs === '-' ? '' : item.obs;
+                document.getElementById('sondFoto').checked = item.fotografia === 'Sim';
+                
+                document.getElementById('containerCamadas').innerHTML = '';
+                if(item.camadas && item.camadas.length > 0) {
+                    item.camadas.forEach(c => {
+                        adicionarCamada();
+                        const divs = document.querySelectorAll('.camada');
+                        const last = divs[divs.length - 1];
+                        last.querySelector('.camada-ini').value = c.ini;
+                        last.querySelector('.camada-fim').value = c.fim;
+                        last.querySelector('.camada-desc').value = c.desc;
+                    });
+                } else { adicionarCamada(); }
+
+                document.getElementById('tituloAbaSond').innerText = "Editar Sondagem";
+                document.getElementById('btnSalvaSond').innerText = "Atualizar Sondagem";
+                document.getElementById('btnCancelaSond').classList.remove('hidden');
+                mudarAba('abaSondagem');
+            }
+        }
+
+        function cancelarEdicao(tipo) {
+            if(tipo === 'PM') {
+                document.getElementById('formPM').reset();
+                document.getElementById('pmIndex').value = "";
+                document.getElementById('tituloAbaPM').innerText = "Adicionar Poço (PM)";
+                document.getElementById('btnSalvaPM').innerText = "Salvar Poço";
+                document.getElementById('btnCancelaPM').classList.add('hidden');
+            } else {
+                document.getElementById('formSondagem').reset();
+                document.getElementById('sondIndex').value = "";
+                document.getElementById('containerCamadas').innerHTML = '';
+                adicionarCamada();
+                document.getElementById('tituloAbaSond').innerText = "Nova Sondagem";
+                document.getElementById('btnSalvaSond').innerText = "Salvar Sondagem";
+                document.getElementById('btnCancelaSond').classList.add('hidden');
+            }
+            mudarAba('abaProjeto');
+        }
+
+        // ========== SALVAR POÇO (PM) ==========
+        function salvarPM() {
+            const id = document.getElementById('pmId').value.trim();
+            const prof = document.getElementById('pmProf').value.trim();
+            if (!id || !prof) return alert('Obrigatório informar ID e Profundidade.');
+            
+            const p = projetos.find(x => x.id === projetoAtualId);
+            const indexStr = document.getElementById('pmIndex').value;
+            const fotoMarcada = document.getElementById('pmFoto').checked ? 'Sim' : 'Não';
+
+            const dados = {
+                id,
+                na: document.getElementById('pmNA').value.trim() || '-',
+                prof,
+                fase: document.getElementById('pmFase').value.trim() || '-',
+                fotografia: fotoMarcada,
+                obs: document.getElementById('pmObs').value.trim().replace(/\n/g, ' ') || '-'
+            };
+
+            if (indexStr !== "") { 
+                p.pms[parseInt(indexStr)] = dados;
+                showToast('PM atualizado!');
+            } else { 
+                p.pms.push(dados);
+                showToast('PM salvo com sucesso!');
+            }
+            
+            salvarBanco();
+            cancelarEdicao('PM'); 
+            atualizarDashboard();
+        }
+
+        // ========== CAMADAS DE SONDAGEM ==========
+        function adicionarCamada() {
+            const container = document.getElementById('containerCamadas');
+            const div = document.createElement('div');
+            div.className = 'camada bg-white p-3 rounded-lg border border-amber-200 flex flex-col gap-2 shadow-sm';
+            div.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <span class="font-bold text-[11px] uppercase tracking-wide text-amber-800">Estrato Litológico</span>
+                    <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-400 hover:text-red-600 font-bold text-lg leading-none">&times;</button>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" inputmode="decimal" class="camada-ini input-field marrom mt-0" placeholder="Início (m)">
+                    <input type="text" inputmode="decimal" class="camada-fim input-field marrom mt-0" placeholder="Fim (m)">
+                </div>
+                <input type="text" class="camada-desc input-field marrom mt-0" placeholder="Ex: Argila siltosa...">
+            `;
+            container.appendChild(div);
+        }
+
+        // ========== SALVAR SONDAGEM ==========
+        function salvarSondagem() {
+            const id = document.getElementById('sondId').value.trim();
+            const prof = document.getElementById('sondProfTotal').value.trim();
+            if (!id || !prof) return alert('Obrigatório informar ID e Profundidade.');
+            
+            const camadas = [];
+            document.querySelectorAll('#containerCamadas .camada').forEach(el => {
+                const ini = el.querySelector('.camada-ini').value.trim();
+                const fim = el.querySelector('.camada-fim').value.trim();
+                const desc = el.querySelector('.camada-desc').value.trim();
+                if (ini || fim || desc) camadas.push({ ini, fim, desc });
+            });
+            
+            const p = projetos.find(x => x.id === projetoAtualId);
+            const indexStr = document.getElementById('sondIndex').value;
+            const fotoMarcada = document.getElementById('sondFoto').checked ? 'Sim' : 'Não';
+
+            const dados = {
+                id,
+                profTotal: prof,
+                fotografia: fotoMarcada,
+                obs: document.getElementById('sondObs').value.trim().replace(/\n/g, ' ') || '-',
+                camadas
+            };
+
+            if (indexStr !== "") { 
+                p.sondagens[parseInt(indexStr)] = dados;
+                showToast('Sondagem atualizada!');
+            } else {
+                p.sondagens.push(dados);
+                showToast('Sondagem salva!');
+            }
+            
+            salvarBanco();
+            cancelarEdicao('Sondagem');
+            atualizarDashboard();
+        }
+
+        // ========== GERAR PDF (NOVIDADE) ==========
+        async function gerarPDF() {
+            salvarCapaProjeto();
+            const p = projetos.find(x => x.id === projetoAtualId);
+            if (!p || (p.pms.length === 0 && p.sondagens.length === 0)) {
+                return alert('Não há dados para exportar neste projeto.');
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            let startY = 20;
+
+            // Tentativa de adicionar a Logo
+            try {
+                const logoData = getBase64Image('logoImg');
+                doc.addImage(logoData, 'PNG', 14, 10, 30, 30);
+                startY = 45;
+            } catch(e) {
+                // Se der erro (ex: offline puro sem cache da imagem), escreve só o nome
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(16);
+                doc.text("BEZERRA AMBIENTAL", 14, 20);
+                startY = 35;
+            }
+
+            // Cabeçalho do Projeto
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text("RELATÓRIO DE CAMPO", 14, startY);
+            
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            startY += 8;
+            doc.text(`Projeto: ${p.nome || 'Não informado'}`, 14, startY);
+            doc.text(`Número: ${p.numero || 'N/A'}`, 120, startY);
+            startY += 6;
+            doc.text(`Data: ${p.data || 'N/A'}`, 14, startY);
+            doc.text(`Técnico: ${p.tecnico || 'N/A'}`, 120, startY);
+
+            startY += 12;
+
+            // Tabela de Poços (PM)
+            if (p.pms.length > 0) {
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(11);
+                doc.text("POÇOS DE MONITORAMENTO (PM)", 14, startY);
+                
+                doc.autoTable({
+                    startY: startY + 4,
+                    head: [['ID', 'Prof.(m)', 'Nível(m)', 'Fase Livre(cm)', 'Foto', 'Observações']],
+                    body: p.pms.map(pm => [pm.id, pm.prof, pm.na, pm.fase, pm.fotografia, pm.obs]),
+                    theme: 'grid',
+                    headStyles: { fillColor: [21, 101, 192], textColor: 255, fontStyle: 'bold' }, // Azul
+                    styles: { font: 'helvetica', fontSize: 9, cellPadding: 3 }
+                });
+                startY = doc.lastAutoTable.finalY + 15;
+            }
+
+            // Tabela de Sondagens
+            if (p.sondagens.length > 0) {
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(11);
+                doc.text("SONDAGENS E PERFIS", 14, startY);
+                
+                let sondData = [];
+                p.sondagens.forEach(s => {
+                    // Linha de Cabeçalho da Sondagem
+                    sondData.push([{content: `ID: ${s.id} | Prof. Total: ${s.profTotal}m | Foto: ${s.fotografia}`, colSpan: 3, styles: {fillColor: [240, 240, 240], fontStyle: 'bold', textColor: [0,0,0]}}]);
+                    
+                    // Camadas
+                    if (s.camadas && s.camadas.length > 0) {
+                        sondData.push([{content: 'Início (m)', styles: {fontStyle: 'bold'}}, {content: 'Fim (m)', styles: {fontStyle: 'bold'}}, {content: 'Descrição Litológica', styles: {fontStyle: 'bold'}}]);
+                        s.camadas.forEach(c => sondData.push([c.ini, c.fim, c.desc]));
+                    }
+                    // Obs
+                    if (s.obs && s.obs !== '-') {
+                        sondData.push([{content: `Obs: ${s.obs}`, colSpan: 3, styles: {fontStyle: 'italic' }}]);
+                    }
+                });
+
+                doc.autoTable({
+                    startY: startY + 4,
+                    body: sondData,
+                    theme: 'grid',
+                    headStyles: { fillColor: [141, 110, 99] }, // Marrom (não usado diretamente pois construímos o body)
+                    styles: { font: 'helvetica', fontSize: 9, cellPadding: 3 },
+                    didParseCell: function (data) {
+                        // Força a primeira linha de cada sondagem a ter fundo marrom se quiser, 
+                        // mas acima usei cinza para destacar. Vamos manter cinza que fica limpo.
+                    }
                 });
             }
+
+            // Rodapé
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(7);
+                doc.setTextColor(100);
+                doc.text("Todos os direitos reservados à Bezerra Ambiental (29.165.656/0001-46) e Bruno Bezerra.", 14, doc.internal.pageSize.height - 10);
+            }
+
+            // Processo de Compartilhamento/Download
+            const nomeStr = p.nome ? p.nome.replace(/\s+/g, '_') : 'Projeto';
+            const fileName = `Relatorio_${nomeStr}.pdf`;
+            const pdfBlob = doc.output('blob');
+            const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+            // Se o celular suportar compartilhamento de arquivos (Abre gaveta do Whats, Drive, Email)
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        title: 'Relatório Bezerra Ambiental',
+                        text: `Relatório do projeto: ${p.nome}`,
+                        files: [file]
+                    });
+                    showToast("Enviado com sucesso!");
+                } catch (e) {
+                    console.log('Compartilhamento cancelado.');
+                }
+            } else {
+                // PC ou celular antigo: Força o Download
+                doc.save(fileName);
+                alert("O PDF foi baixado! Você pode anexá-lo manualmente no e-mail, WhatsApp ou Google Drive.");
+            }
         }
 
-        function abrirModalExportacao() {
-            if(projetoData.registros.length === 0) return alert('Nenhum dado para exportar.');
-            salvarProjeto();
-            document.getElementById('modal-export').classList.remove('hidden');
-        }
-
-        function fecharModal() { document.getElementById('modal-export').classList.add('hidden'); }
-
-        function gerarTextoRelatorio() {
-            let txt = `📋 *PROJETO:* ${projetoData.nome || 'Não nomeado'}\n📅 *Data:* ${projetoData.data}\n👷 *Técnico:* ${projetoData.tecnico}\n\n`;
-            projetoData.registros.forEach(r => {
-                txt += `🔹 *[${r.tipo}] ID: ${r.id}*\nProfundidade: ${r.profundidade}m\n`;
-                if(r.nivel) txt += `NE: ${r.nivel}m\n`;
-                if(r.lnapl) txt += `Fase Livre: ${r.lnapl}cm\n`;
-                if(r.observacao) txt += `Obs: ${r.observacao}\n`;
-                txt += `\n`;
-            });
-            return txt;
-        }
-
-        function gerarCSV() {
-            let csv = "Projeto,Data,Tecnico,Tipo,ID_Ponto,Profundidade(m),Nivel(m),FaseLivre(cm),Observacoes\n";
-            projetoData.registros.forEach(r => {
-                csv += `"${projetoData.nome}","${projetoData.data}","${projetoData.tecnico}","${r.tipo}","${r.id}","${r.profundidade}","${r.nivel || ''}","${r.lnapl || ''}","${r.observacao || ''}"\n`;
-            });
-            return csv;
-        }
-
+        // ========== EXPORTAÇÃO CSV E TEXTO ==========
         function exportarCSV() {
-            const blob = new Blob(["\uFEFF"+gerarCSV()], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `GeoColeta_${projetoData.nome || 'Projeto'}.csv`;
-            link.click();
-            fecharModal();
+            salvarCapaProjeto();
+            const p = projetos.find(x => x.id === projetoAtualId);
+            if (!p || (p.pms.length === 0 && p.sondagens.length === 0)) return alert('Vazio.');
+
+            let csv = '\uFEFF'; 
+            csv += 'N_PROJETO;NOME_PROJETO;DATA;TECNICO;TIPO;ID_PONTO;PROF_TOTAL;NIVEL_AGUA;FASE_LIVRE;INICIO_CAMADA;FIM_CAMADA;DESC_LITOLOGICA;OBSERVACOES;TEVE_FOTO\n';
+            
+            p.pms.forEach(pm => {
+                csv += `"${p.numero}";"${p.nome}";"${p.data}";"${p.tecnico}";PM;${pm.id};${pm.prof};${pm.na};${pm.fase};;;;"${pm.obs}";${pm.fotografia}\n`;
+            });
+            
+            p.sondagens.forEach(s => {
+                const base = `"${p.numero}";"${p.nome}";"${p.data}";"${p.tecnico}";SONDAGEM;${s.id};${s.profTotal};;;`;
+                if (s.camadas.length === 0) {
+                    csv += `${base};;;"${s.obs}";${s.fotografia}\n`;
+                } else {
+                    s.camadas.forEach((c, idx) => {
+                        if(idx === 0) csv += `${base}${c.ini};${c.fim};"${c.desc}";"${s.obs}";${s.fotografia}\n`;
+                        else csv += `"${p.numero}";"${p.nome}";"${p.data}";"${p.tecnico}";SONDAGEM;${s.id};;;;${c.ini};${c.fim};"${c.desc}";;\n`;
+                    });
+                }
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; 
+            a.download = `Planilha_${p.nome.replace(/\s+/g, '_')}.csv`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            showToast("Planilha baixada.");
         }
 
         function exportarWhatsApp() {
-            window.open(`https://wa.me/?text=${encodeURIComponent(gerarTextoRelatorio())}`, '_blank');
-            fecharModal();
-        }
-
-        function exportarEmail() {
-            window.open(`mailto:?subject=Relatório de Campo - ${projetoData.nome}&body=${encodeURIComponent(gerarTextoRelatorio())}`, '_blank');
-            fecharModal();
-        }
-
-        async function salvarDrive() {
-            const blob = new Blob(["\uFEFF"+gerarCSV()], { type: 'text/csv;charset=utf-8;' });
-            const file = new File([blob], `GeoColeta_${projetoData.nome || 'Projeto'}.csv`, { type: 'text/csv' });
+            salvarCapaProjeto();
+            const p = projetos.find(x => x.id === projetoAtualId);
+            let txt = `*RELATÓRIO DE CAMPO*\n*PROJETO:* ${p.nome} (Nº ${p.numero})\n*DATA:* ${p.data}\n*TÉCNICO:* ${p.tecnico}\n\n`;
+            txt += `💧 *POÇOS DE MONITORAMENTO (${p.pms.length})*\n`;
+            p.pms.forEach(pm => { txt += `- ${pm.id} (Prof: ${pm.prof}m | NA: ${pm.na}m)\n`; });
+            txt += `\n🕳️ *SONDAGENS (${p.sondagens.length})*\n`;
+            p.sondagens.forEach(s => { txt += `- ${s.id} (Prof: ${s.profTotal}m)\n`; });
+            txt += `\n_Para ver as litologias e os dados completos, acesse o PDF ou a Planilha._`;
             
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                try {
-                    await navigator.share({ title: 'Planilha GeoColeta', files: [file] });
-                } catch (e) { console.log('Cancelado pelo usuário.'); }
-            } else {
-                alert('Compartilhamento direto não suportado neste aparelho. Fazendo download...');
-                exportarCSV();
-            }
-            fecharModal();
+            window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
         }
     </script>
 </body>
