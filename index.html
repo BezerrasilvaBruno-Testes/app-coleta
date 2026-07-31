@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Coleta Ambiental</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input, select, textarea { font-size: 16px; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease-out; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .brand-blue { background-color: #0369a1; } 
+        .brand-green { background-color: #0d9488; } 
+        .text-brand-green { color: #0d9488; }
+        .border-brand-green { border-color: #0d9488; }
+
+        /* Toast Notification */
+        #toast {
+            visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
+            text-align: center; border-radius: 8px; padding: 16px; position: fixed;
+            z-index: 100; left: 50%; bottom: 30px; transform: translateX(-50%);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        #toast.show {
+            visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+        @keyframes fadein { from { bottom: 0; opacity: 0; } to { bottom: 30px; opacity: 1; } }
+        @keyframes fadeout { from { bottom: 30px; opacity: 1; } to { bottom: 0; opacity: 0; } }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen antialiased">
+
+    <!-- Header -->
+    <header class="brand-blue p-4 shadow-md flex justify-between items-center text-white sticky top-0 z-50">
+        <div>
+            <h1 class="text-xl font-bold tracking-wide">Coleta Ambiental</h1>
+            <p class="text-xs text-blue-200">Sistema Autônomo de Campo</p>
+        </div>
+        <div id="status-icon" class="w-3 h-3 bg-green-400 rounded-full shadow-[0_0_8px_#4ade80]" title="Sistema Operante"></div>
+    </header>
+
+    <!-- Abas -->
+    <div class="flex bg-white shadow-sm border-b border-gray-200 sticky top-[68px] z-40">
+        <button onclick="openTab('tab-projeto')" id="btn-tab-projeto" class="flex-1 py-3 text-sm font-bold text-gray-400 border-b-4 border-transparent transition-colors">PROJETO</button>
+        <button onclick="openTab('tab-poco')" id="btn-tab-poco" class="flex-1 py-3 text-sm font-bold text-gray-400 border-b-4 border-transparent transition-colors">PM (ÁGUA)</button>
+        <button onclick="openTab('tab-sondagem')" id="btn-tab-sondagem" class="flex-1 py-3 text-sm font-bold text-gray-400 border-b-4 border-transparent transition-colors">SONDAGEM</button>
+    </div>
+
+    <main class="p-4 pb-24 max-w-2xl mx-auto">
+
+        <!-- ABA PROJETO -->
+        <section id="tab-projeto" class="tab-content active space-y-5">
+            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                    Informações do Projeto
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1">Nome do Projeto / Cliente *</label>
+                        <input type="text" id="proj-nome" class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600" placeholder="Ex: Indústria XYZ" oninput="salvarProjeto()">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-600 mb-1">Data</label>
+                            <input type="date" id="proj-data" class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600" oninput="salvarProjeto()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-600 mb-1">Técnico</label>
+                            <input type="text" id="proj-tecnico" class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600" placeholder="Nome" oninput="salvarProjeto()">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                    <h2 class="text-lg font-bold text-gray-800">Registros Coletados</h2>
+                    <span id="badge-count" class="bg-teal-100 text-teal-800 text-xs font-bold px-2 py-1 rounded-full">0 itens</span>
+                </div>
+                <ul id="lista-registros" class="space-y-2 empty:hidden"></ul>
+                <p id="msg-vazio" class="text-sm text-gray-400 italic text-center py-4">Nenhum registro adicionado ainda.</p>
+            </div>
+
+            <div class="space-y-3 pt-2">
+                <button onclick="abrirModalExportacao()" class="w-full brand-green hover:bg-teal-700 text-white font-bold py-4 rounded-xl shadow-md transition-colors text-lg flex justify-center items-center gap-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    Encerrar e Exportar
+                </button>
+                <button onclick="limparProjeto()" class="w-full bg-white border border-red-200 text-red-500 font-bold py-3 rounded-xl transition-colors hover:bg-red-50">
+                    Limpar Projeto Atual
+                </button>
+            </div>
+        </section>
+
+        <!-- ABA PM (ÁGUA) -->
+        <section id="tab-poco" class="tab-content space-y-5">
+            <div class="bg-blue-50 border border-blue-200 p-5 rounded-xl shadow-sm">
+                <div class="flex items-center gap-2 border-b border-blue-200 pb-3 mb-4">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    <h2 class="text-lg font-bold text-blue-900">Novo Poço de Monitoramento</h2>
+                </div>
+                <form id="form-pm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-blue-900 mb-1">ID do Poço *</label>
+                        <input type="text" name="id" required class="w-full border border-blue-300 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Ex: PM-01">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-blue-900 mb-1">Profundidade (m) *</label>
+                            <input type="number" inputmode="decimal" step="0.01" name="profundidade" required class="w-full border border-blue-300 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="0.00">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-blue-900 mb-1">Nível d'Água (m) *</label>
+                            <input type="number" inputmode="decimal" step="0.01" name="nivel" required class="w-full border border-blue-300 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="0.00">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-blue-900 mb-1">Fase Livre (cm)</label>
+                        <input type="number" inputmode="decimal" step="0.1" name="lnapl" class="w-full border border-blue-300 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Deixe vazio se não houver">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-blue-900 mb-1">Observações</label>
+                        <textarea name="observacao" class="w-full border border-blue-300 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Detalhes..."></textarea>
+                    </div>
+                    <button type="button" onclick="salvarRegistro('form-pm', 'PM')" class="w-full brand-blue hover:bg-blue-800 text-white font-bold py-4 rounded-xl shadow-md transition-colors mt-4">
+                        + Salvar Poço
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- ABA SONDAGEM -->
+        <section id="tab-sondagem" class="tab-content space-y-5">
+            <div class="bg-amber-50 border border-amber-200 p-5 rounded-xl shadow-sm">
+                <div class="flex items-center gap-2 border-b border-amber-200 pb-3 mb-4">
+                    <svg class="w-6 h-6 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    <h2 class="text-lg font-bold text-amber-900">Nova Sondagem</h2>
+                </div>
+                <form id="form-sondagem" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-amber-900 mb-1">ID da Sondagem *</label>
+                        <input type="text" name="id" required class="w-full border border-amber-300 rounded-lg px-4 py-3 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600" placeholder="Ex: SP-01">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-amber-900 mb-1">Profundidade Total (m) *</label>
+                        <input type="number" inputmode="decimal" step="0.01" name="profundidade" required class="w-full border border-amber-300 rounded-lg px-4 py-3 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-amber-900 mb-1">Perfil Litoestratigráfico</label>
+                        <textarea name="observacao" class="w-full border border-amber-300 rounded-lg px-4 py-3 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600" placeholder="Ex: 0-2m Aterro; 2-4m Argila siltosa..."></textarea>
+                    </div>
+                    <button type="button" onclick="salvarRegistro('form-sondagem', 'Sondagem')" class="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold py-4 rounded-xl shadow-md transition-colors mt-4">
+                        + Salvar Sondagem
+                    </button>
+                </form>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL DE EXPORTAÇÃO -->
+    <div id="modal-export" class="fixed inset-0 bg-slate-900/80 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative">
+            <button onclick="fecharModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
+            <h2 class="text-xl font-bold text-gray-800 mb-2">Exportar Projeto</h2>
+            <p class="text-sm text-gray-500 mb-6">Como deseja enviar os dados consolidados?</p>
+            
+            <div class="space-y-3">
+                <button onclick="exportarCSV()" class="w-full brand-blue text-white font-bold py-3.5 rounded-xl shadow-md hover:bg-blue-800 transition-colors">(Salvar)</button>
+                <button onclick="exportarWhatsApp()" class="w-full bg-[#25D366] text-white font-bold py-3.5 rounded-xl shadow-md hover:bg-green-600 transition-colors">(Enviar via Whatsapp)</button>
+                <button onclick="exportarEmail()" class="w-full bg-gray-700 text-white font-bold py-3.5 rounded-xl shadow-md hover:bg-gray-800 transition-colors">(Enviar via Email)</button>
+                <button onclick="salvarDrive()" class="w-full bg-white border border-gray-300 text-gray-700 font-bold py-3.5 rounded-xl shadow-sm hover:bg-gray-50 transition-colors flex justify-center items-center gap-2">
+                    <svg class="w-5 h-5" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#FFC107" d="M17 6l-11.4 20h15.6l11.4-20z"/><path fill="#1976D2" d="M38.4 42H15.6L4.2 22.1l11.4-19.8 11.4 19.8z"/><path fill="#4CAF50" d="M43.8 22.1L32.4 2.3 21 22.1l11.4 19.9z"/></svg>
+                    (Salvar no Google Drive)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast">Registro salvo com sucesso!</div>
+
+    <script>
+        const STORAGE_KEY = 'bezerra_data_v1';
+        let projetoData = { nome: '', data: '', tecnico: '', registros: [] };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+            carregarProjeto();
+            openTab('tab-projeto');
+        });
+
+        function showToast(msg) {
+            const toast = document.getElementById("toast");
+            toast.innerText = msg;
+            toast.className = "show";
+            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        function openTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+
+            const btns = ['btn-tab-projeto', 'btn-tab-poco', 'btn-tab-sondagem'];
+            btns.forEach(id => {
+                const btn = document.getElementById(id);
+                btn.classList.remove('text-brand-green', 'border-brand-green');
+                btn.classList.add('text-gray-400', 'border-transparent');
+            });
+
+            const activeBtn = document.getElementById('btn-' + tabId);
+            activeBtn.classList.remove('text-gray-400', 'border-transparent');
+            activeBtn.classList.add('text-brand-green', 'border-brand-green');
+        }
+
+        function carregarProjeto() {
+            const salvo = localStorage.getItem(STORAGE_KEY);
+            if (salvo) {
+                projetoData = JSON.parse(salvo);
+                document.getElementById('proj-nome').value = projetoData.nome || '';
+                document.getElementById('proj-data').value = projetoData.data || '';
+                document.getElementById('proj-tecnico').value = projetoData.tecnico || '';
+            }
+            atualizarLista();
+        }
+
+        function salvarProjeto() {
+            projetoData.nome = document.getElementById('proj-nome').value;
+            projetoData.data = document.getElementById('proj-data').value;
+            projetoData.tecnico = document.getElementById('proj-tecnico').value;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(projetoData));
+        }
+
+        function salvarRegistro(formId, tipo) {
+            const form = document.getElementById(formId);
+            const fd = new FormData(form);
+            const dataObj = Object.fromEntries(fd.entries());
+            
+            if(!dataObj.id || !dataObj.profundidade) {
+                alert("Obrigatório informar ID e Profundidade.");
+                return;
+            }
+
+            dataObj.tipo = tipo;
+            projetoData.registros.push(dataObj);
+            
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(projetoData));
+            form.reset();
+            atualizarLista();
+            showToast(`${tipo} salvo com sucesso!`);
+        }
+
+        function excluirRegistro(index) {
+            if(confirm('Excluir item?')) {
+                projetoData.registros.splice(index, 1);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(projetoData));
+                atualizarLista();
+            }
+        }
+
+        function limparProjeto() {
+            if(confirm('Apagar TODO o projeto atual e seus registros permanentemente?')) {
+                projetoData = { nome: '', data: '', tecnico: '', registros: [] };
+                localStorage.removeItem(STORAGE_KEY);
+                document.getElementById('proj-nome').value = '';
+                document.getElementById('proj-data').value = '';
+                document.getElementById('proj-tecnico').value = '';
+                atualizarLista();
+            }
+        }
+
+        function atualizarLista() {
+            const lista = document.getElementById('lista-registros');
+            const msgVazio = document.getElementById('msg-vazio');
+            document.getElementById('badge-count').innerText = `${projetoData.registros.length} itens`;
+            
+            lista.innerHTML = '';
+            if (projetoData.registros.length === 0) {
+                msgVazio.style.display = 'block';
+            } else {
+                msgVazio.style.display = 'none';
+                projetoData.registros.forEach((reg, idx) => {
+                    const tagClass = reg.tipo === 'PM' ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-amber-100 text-amber-800 border-amber-200';
+                    const li = document.createElement('li');
+                    li.className = "flex justify-between items-center bg-white p-3 rounded-lg border border-gray-200 shadow-sm";
+                    li.innerHTML = `
+                        <div class="text-sm text-gray-700 font-medium">
+                            <span class="${tagClass} border px-2 py-0.5 rounded text-xs mr-2 font-bold">${reg.tipo}</span>
+                            ${reg.id} <span class="text-gray-400 font-normal ml-1">(${reg.profundidade}m)</span>
+                        </div>
+                        <button onclick="excluirRegistro(${idx})" class="text-red-400 hover:text-red-600 px-2 py-1 bg-red-50 rounded transition-colors">&times;</button>
+                    `;
+                    lista.appendChild(li);
+                });
+            }
+        }
+
+        function abrirModalExportacao() {
+            if(projetoData.registros.length === 0) return alert('Nenhum dado para exportar.');
+            salvarProjeto();
+            document.getElementById('modal-export').classList.remove('hidden');
+        }
+
+        function fecharModal() { document.getElementById('modal-export').classList.add('hidden'); }
+
+        function gerarTextoRelatorio() {
+            let txt = `📋 *PROJETO:* ${projetoData.nome || 'Não nomeado'}\n📅 *Data:* ${projetoData.data}\n👷 *Técnico:* ${projetoData.tecnico}\n\n`;
+            projetoData.registros.forEach(r => {
+                txt += `🔹 *[${r.tipo}] ID: ${r.id}*\nProfundidade: ${r.profundidade}m\n`;
+                if(r.nivel) txt += `NE: ${r.nivel}m\n`;
+                if(r.lnapl) txt += `Fase Livre: ${r.lnapl}cm\n`;
+                if(r.observacao) txt += `Obs: ${r.observacao}\n`;
+                txt += `\n`;
+            });
+            return txt;
+        }
+
+        function gerarCSV() {
+            let csv = "Projeto,Data,Tecnico,Tipo,ID_Ponto,Profundidade(m),Nivel(m),FaseLivre(cm),Observacoes\n";
+            projetoData.registros.forEach(r => {
+                csv += `"${projetoData.nome}","${projetoData.data}","${projetoData.tecnico}","${r.tipo}","${r.id}","${r.profundidade}","${r.nivel || ''}","${r.lnapl || ''}","${r.observacao || ''}"\n`;
+            });
+            return csv;
+        }
+
+        function exportarCSV() {
+            const blob = new Blob(["\uFEFF"+gerarCSV()], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `GeoColeta_${projetoData.nome || 'Projeto'}.csv`;
+            link.click();
+            fecharModal();
+        }
+
+        function exportarWhatsApp() {
+            window.open(`https://wa.me/?text=${encodeURIComponent(gerarTextoRelatorio())}`, '_blank');
+            fecharModal();
+        }
+
+        function exportarEmail() {
+            window.open(`mailto:?subject=Relatório de Campo - ${projetoData.nome}&body=${encodeURIComponent(gerarTextoRelatorio())}`, '_blank');
+            fecharModal();
+        }
+
+        async function salvarDrive() {
+            const blob = new Blob(["\uFEFF"+gerarCSV()], { type: 'text/csv;charset=utf-8;' });
+            const file = new File([blob], `GeoColeta_${projetoData.nome || 'Projeto'}.csv`, { type: 'text/csv' });
+            
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({ title: 'Planilha GeoColeta', files: [file] });
+                } catch (e) { console.log('Cancelado pelo usuário.'); }
+            } else {
+                alert('Compartilhamento direto não suportado neste aparelho. Fazendo download...');
+                exportarCSV();
+            }
+            fecharModal();
+        }
+    </script>
+</body>
+</html>
