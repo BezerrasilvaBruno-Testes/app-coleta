@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Coleta de Campo – Bezerra Ambiental</title>
+    <title>Bezerra Coleta – vFinal</title>
     <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Bibliotecas para Gerar PDF Offline -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -18,8 +17,9 @@
                 extend: {
                     fontFamily: { sans: ['Inter', 'sans-serif'] },
                     colors: {
-                        'bezerra-verde': '#2E7D32',
-                        'bezerra-azul': '#1565C0',
+                        'bezerra-verde': '#3BAE52',
+                        'bezerra-verde-claro': '#86BC94',
+                        'bezerra-azul': '#73AEE4',
                         'solo-marrom': '#8D6E63',
                     }
                 }
@@ -28,21 +28,19 @@
     </script>
     <style>
         body { background-color: #F3F4F6; -webkit-tap-highlight-color: transparent; }
-        .tela { display: none; animation: fadeIn 0.3s ease; }
-        .tela.active { display: block; }
-        .tab-content { display: none; animation: fadeIn 0.3s ease; }
-        .tab-content.active { display: block; }
+        .tela, .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tela.active, .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        
         .input-field {
-            width: 100%; padding: 0.85rem; margin-top: 0.25rem;
+            width: 100%; padding: 0.75rem; margin-top: 0.25rem; margin-bottom: 0.5rem;
             border: 1px solid #D1D5DB; border-radius: 0.5rem; outline: none; background: #fff;
-            color: #1F2937; transition: border-color 0.2s, box-shadow 0.2s; font-size: 16px;
+            color: #1F2937; font-size: 14px;
         }
-        .input-field:focus { border-color: #2E7D32; box-shadow: 0 0 0 2px rgba(46,125,50,0.2); }
-        .input-field.azul:focus { border-color: #1565C0; box-shadow: 0 0 0 2px rgba(21,101,192,0.2); }
+        .input-field:focus { border-color: #3BAE52; box-shadow: 0 0 0 2px rgba(59,174,82,0.2); }
+        .input-field.azul:focus { border-color: #73AEE4; box-shadow: 0 0 0 2px rgba(115,174,228,0.2); }
         .input-field.marrom:focus { border-color: #8D6E63; box-shadow: 0 0 0 2px rgba(141,110,99,0.2); }
-
+        .collapsible-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .collapsible-content.open { max-height: 5000px; }
         #toast {
             visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
             text-align: center; border-radius: 8px; padding: 12px; position: fixed;
@@ -52,85 +50,142 @@
         #toast.show { visibility: visible; animation: fadein 0.4s, fadeout 0.4s 2.5s; }
         @keyframes fadein { from { bottom: 0; opacity: 0; } to { bottom: 30px; opacity: 1; } }
         @keyframes fadeout { from { bottom: 30px; opacity: 1; } to { bottom: 0; opacity: 0; } }
+        .vistoria-tag { font-size: 9px; background-color: #e5e7eb; color: #4b5563; padding: 2px 5px; border-radius: 4px; font-weight: bold; margin-right: 6px; letter-spacing: 0.5px; }
+        .hidden-input { display: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .tooltip-trigger {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 16px; height: 16px; border-radius: 50%; background: #e5e7eb;
+            color: #6b7280; font-size: 10px; font-weight: bold; cursor: pointer;
+            margin-left: 4px; vertical-align: middle; position: relative;
+        }
+        .tooltip-trigger .tooltip-text {
+            display: none; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: #1f2937; color: #fff; padding: 4px 8px; border-radius: 4px;
+            font-size: 10px; font-weight: normal; white-space: nowrap; z-index: 50;
+        }
+        .tooltip-trigger:hover .tooltip-text { display: block; }
+        .progress-bar { transition: width 0.3s ease; }
     </style>
 </head>
 <body class="text-gray-800 antialiased font-sans pb-20 flex flex-col min-h-screen">
 
-    <!-- Cabeçalho -->
     <header class="bg-gradient-to-r from-bezerra-verde to-bezerra-azul text-white shadow-md sticky top-0 z-50">
-        <div class="p-4 flex justify-between items-center max-w-lg mx-auto w-full">
-            <div>
-                <h1 class="text-xl font-bold tracking-wide">🌿 BEZERRA AMBIENTAL</h1>
-                <p id="headerSubtitle" class="text-xs opacity-90 font-medium">Histórico de Projetos</p>
+        <div class="p-3 flex justify-between items-center max-w-lg mx-auto w-full">
+            <div class="flex items-center gap-3">
+                <img src="icon.png" class="w-8 h-8 rounded bg-white p-0.5 object-contain" alt="Logo" onerror="this.style.display='none'">
+                <div>
+                    <h1 class="text-lg font-bold tracking-wide leading-tight">BEZERRA COLETA</h1>
+                    <p id="headerSubtitle" class="text-[10px] opacity-90 font-medium">Histórico de Projetos</p>
+                </div>
             </div>
-            <button id="btnVoltarLobby" onclick="irParaLobby()" class="hidden text-sm font-bold bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded transition">🏠 MENU</button>
+            <button id="btnVoltarLobby" onclick="irParaLobby()" class="hidden text-xs font-bold bg-white/20 px-3 py-2 rounded">🏠 MENU</button>
         </div>
-        <nav id="navTabs" class="hidden flex overflow-x-auto bg-white text-sm font-bold shadow-inner border-b border-gray-200 max-w-lg mx-auto w-full">
-            <button onclick="mudarAba('abaProjeto')" id="btn-abaProjeto" class="flex-1 py-3 px-2 text-bezerra-verde border-b-4 border-bezerra-verde transition whitespace-nowrap">PROJETO</button>
-            <button onclick="mudarAba('abaPM')" id="btn-abaPM" class="flex-1 py-3 px-2 text-gray-400 border-b-4 border-transparent transition whitespace-nowrap hover:text-bezerra-azul">+ PM</button>
-            <button onclick="mudarAba('abaSondagem')" id="btn-abaSondagem" class="flex-1 py-3 px-2 text-gray-400 border-b-4 border-transparent transition whitespace-nowrap hover:text-solo-marrom">+ SONDAGEM</button>
-            <button onclick="mudarAba('abaExportar')" id="btn-abaExportar" class="flex-1 py-3 px-2 text-gray-400 border-b-4 border-transparent transition whitespace-nowrap hover:text-gray-800">EXPORTAR</button>
+        <nav id="navTabs" class="hidden flex overflow-x-auto bg-white text-[11px] font-bold shadow-inner border-b border-gray-200 max-w-lg mx-auto w-full no-scrollbar">
+            <button onclick="mudarAba('abaProjeto')" id="btn-abaProjeto" class="flex-1 py-3 px-2 text-bezerra-verde border-b-4 border-bezerra-verde whitespace-nowrap">PROJETO</button>
+            <button onclick="mudarAba('abaMCE')" id="btn-abaMCE" class="flex-1 py-3 px-2 text-gray-400 border-b-4 border-transparent whitespace-nowrap">MCE</button>
+            <button onclick="mudarAba('abaVistoria')" id="btn-abaVistoria" class="flex-1 py-3 px-2 text-gray-400 border-b-4 border-transparent whitespace-nowrap">VISTORIA</button>
+            <button onclick="mudarAba('abaPM')" id="btn-abaPM" class="flex-1 py-3 px-2 text-gray-400 border-b-4 border-transparent whitespace-nowrap">+ PM</button>
+            <button onclick="mudarAba('abaSondagem')" id="btn-abaSondagem" class="flex-1 py-3 px-2 text-gray-400 border-b-4 border-transparent whitespace-nowrap">+ SONDAGEM</button>
+            <button onclick="mudarAba('abaExportar')" id="btn-abaExportar" class="flex-1 py-3 px-2 text-gray-400 border-b-4 border-transparent whitespace-nowrap">EXPORTAR</button>
         </nav>
     </header>
 
     <main class="p-4 max-w-lg mx-auto w-full flex-grow">
-
-        <!-- Imagem escondida para o PDF -->
         <img id="logoImg" src="icon.png" style="display:none;" crossorigin="anonymous">
 
-        <!-- TELA 1: LOBBY (MENU INICIAL) -->
+        <!-- LOBBY -->
         <section id="telaLobby" class="tela active space-y-4">
-            
-            <!-- LOGO NA TELA INICIAL -->
             <div class="flex justify-center py-4">
-                <img src="icon.png" alt="Bezerra Ambiental" class="w-32 h-32 object-contain rounded-2xl shadow-sm bg-white p-2" onerror="this.style.display='none'">
+                <img src="icon.png" alt="Logo" class="w-32 h-32 object-contain rounded-2xl shadow-sm bg-white p-2" onerror="this.style.display='none'">
             </div>
-
-            <button onclick="novoProjeto()" class="w-full bg-bezerra-verde text-white font-bold py-4 rounded-xl shadow hover:bg-green-800 transition flex items-center justify-center gap-2">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                INICIAR NOVO PROJETO
+            <button onclick="novoProjeto()" class="w-full bg-bezerra-verde text-white font-bold py-4 rounded-xl shadow hover:bg-green-700 transition">
+                + INICIAR NOVO PROJETO
             </button>
+            <div class="mt-2">
+                <button onclick="importarJSON()" class="w-full bg-gray-200 text-gray-700 font-bold py-2 rounded-lg text-xs hover:bg-gray-300 transition">
+                    📥 Importar Backup JSON
+                </button>
+            </div>
             <div class="mt-6">
-                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Histórico de Projetos Salvos</h2>
-                <div id="listaProjetos" class="space-y-3">
-                    <!-- Preenchido via JS -->
-                </div>
+                <h2 class="text-xs font-bold text-gray-400 uppercase mb-3">Histórico de Projetos</h2>
+                <div id="listaProjetos" class="space-y-3"></div>
             </div>
         </section>
 
-        <!-- TELA 2: PROJETO ATUAL -->
+        <!-- PROJETO ATUAL -->
         <section id="telaProjeto" class="tela">
-
-            <!-- ABA DADOS DO PROJETO -->
+            <!-- ABA PROJETO -->
             <div id="abaProjeto" class="tab-content active space-y-4">
                 <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-bezerra-verde">
-                    <h2 class="text-lg font-bold text-gray-800 mb-3 border-b border-gray-100 pb-2">Informações do Projeto</h2>
-                    
-                    <form id="formProjeto" class="space-y-3">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700">Nome do Projeto / Cliente *</label>
-                            <input type="text" id="projNome" class="input-field" placeholder="Ex: Indústria XYZ" onchange="salvarCapaProjeto()">
+                    <div class="flex justify-between items-center mb-3 border-b border-gray-100 pb-2">
+                        <h2 class="text-lg font-bold text-gray-800">Identificação do Projeto</h2>
+                        <div class="text-right">
+                            <span class="text-[10px] text-gray-400 uppercase font-bold">Progresso Capa</span>
+                            <div class="text-sm font-bold text-bezerra-verde" id="progressoGeral">0%</div>
                         </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700">Número do Projeto</label>
-                            <input type="text" id="projNumero" class="input-field" placeholder="Ex: 123/2023" onchange="salvarCapaProjeto()">
-                        </div>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mb-4">
+                        <div id="barraProgresso" class="progress-bar bg-bezerra-verde h-2 rounded-full" style="width: 0%;"></div>
+                    </div>
+
+                    <form id="formProjeto" class="space-y-1">
+                        <label class="text-xs font-semibold text-gray-600">Nome do Projeto / Cliente *</label>
+                        <input type="text" id="projNome" class="input-field rascunho" onchange="salvarCapaProjeto()" oninput="autoSaveRascunho()">
+                        <label class="text-xs font-semibold text-gray-600">Número do Projeto</label>
+                        <input type="text" id="projNumero" class="input-field rascunho" onchange="salvarCapaProjeto()" oninput="autoSaveRascunho()">
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700">Data</label>
-                                <input type="date" id="projData" class="input-field" onchange="salvarCapaProjeto()">
+                                <label class="text-xs font-semibold text-gray-600">Data *</label>
+                                <input type="date" id="projData" class="input-field rascunho" onchange="salvarCapaProjeto()" oninput="autoSaveRascunho()">
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700">Técnico</label>
-                                <input type="text" id="projTecnico" class="input-field" placeholder="Seu nome" onchange="salvarCapaProjeto()">
+                                <label class="text-xs font-semibold text-gray-600">Técnico *</label>
+                                <input type="text" id="projTecnico" class="input-field rascunho" placeholder="Seu nome" onchange="salvarCapaProjeto()" oninput="autoSaveRascunho()">
+                            </div>
+                        </div>
+                        <label class="text-xs font-semibold text-gray-600">Coordenadas GPS ou Endereço *</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="projGPS" class="input-field rascunho flex-1" placeholder="Lat/Long ou Endereço" onchange="salvarCapaProjeto()" oninput="autoSaveRascunho()">
+                            <button type="button" onclick="capturarGPS()" class="bg-bezerra-azul text-white font-bold px-3 py-2 rounded-lg text-xs whitespace-nowrap">📍 GPS</button>
+                        </div>
+                        <label class="text-xs font-semibold text-gray-600">Condições Climáticas</label>
+                        <input type="text" id="projClima" class="input-field rascunho" placeholder="Ex: Chuvoso, Ensolarado" onchange="salvarCapaProjeto()" oninput="autoSaveRascunho()">
+                        <label class="text-xs font-semibold text-gray-600 mt-2">Observações Gerais do Projeto</label>
+                        <textarea id="projObs" rows="2" class="input-field resize-none rascunho" placeholder="Intercorrências, eventos..." onchange="salvarCapaProjeto()" oninput="autoSaveRascunho()"></textarea>
+
+                        <div class="mt-4 border rounded-lg">
+                            <button type="button" onclick="toggleSecao(this)" class="w-full text-left font-bold text-sm text-gray-700 p-3 bg-gray-50 rounded-t-lg flex justify-between items-center">
+                                📋 Documentação e Identificação <span>+</span>
+                            </button>
+                            <div class="collapsible-content p-3 space-y-2 bg-white rounded-b-lg" style="display:none;">
+                                <label class="text-xs font-semibold text-gray-600">CNPJ</label><input type="text" id="projCNPJ" class="input-field rascunho" onchange="salvarCapaProjeto()" oninput="autoSaveRascunho()" placeholder="00.000.000/0000-00">
+                                <label class="text-xs font-semibold text-gray-600">Razão Social</label><input type="text" id="projRazaoSocial" class="input-field rascunho" onchange="salvarCapaProjeto()" oninput="autoSaveRascunho()">
+                                <label class="text-xs font-semibold text-gray-600">Endereço</label><input type="text" id="projEndereco" class="input-field rascunho" onchange="salvarCapaProjeto()" oninput="autoSaveRascunho()">
+                                <label class="text-xs font-semibold text-gray-600">CNAE</label><input type="text" id="projCNAE" class="input-field rascunho" onchange="salvarCapaProjeto()" oninput="autoSaveRascunho()">
+                                <label class="text-xs font-semibold text-gray-600">Matrícula do Imóvel</label><input type="text" id="projMatricula" class="input-field rascunho" onchange="salvarCapaProjeto()" oninput="autoSaveRascunho()">
+                                <label class="text-xs font-semibold text-gray-600">Contrato Social</label><input type="text" id="projContratoSocial" class="input-field rascunho" onchange="salvarCapaProjeto()" oninput="autoSaveRascunho()">
+                                <label class="text-xs font-semibold text-gray-600">Procuração</label><input type="text" id="projProcuracao" class="input-field rascunho" onchange="salvarCapaProjeto()" oninput="autoSaveRascunho()">
+                                <label class="text-xs font-semibold text-gray-600">CTF/APP</label><input type="text" id="projCTFAPP" class="input-field rascunho" onchange="salvarCapaProjeto()" oninput="autoSaveRascunho()">
+                                <label class="text-xs font-semibold text-gray-600">CAR</label><input type="text" id="projCAR" class="input-field rascunho" onchange="salvarCapaProjeto()" oninput="autoSaveRascunho()">
+                            </div>
+                        </div>
+
+                        <div class="mt-4 p-3 bg-gray-50 rounded border border-gray-200">
+                            <h3 class="font-bold text-sm text-gray-700 mb-1">Categoria do Projeto</h3>
+                            <div class="space-y-1">
+                                <label class="flex items-center gap-2 text-xs"><input type="checkbox" id="chkGAC" class="text-bezerra-verde" onchange="salvarCapaProjeto()"> GAC (Gerenciamento Áreas Contaminadas)</label>
+                                <label class="flex items-center gap-2 text-xs"><input type="checkbox" id="chkLicenc" class="text-bezerra-verde" onchange="salvarCapaProjeto()"> Licenciamento Ambiental / APM</label>
+                                <label class="flex items-center gap-2 text-xs"><input type="checkbox" id="chkCADRI" class="text-bezerra-verde" onchange="salvarCapaProjeto()"> Gestão de Resíduos (CADRI / PGRS)</label>
+                                <label class="flex items-center gap-2 text-xs"><input type="checkbox" id="chkISO" class="text-bezerra-verde" onchange="salvarCapaProjeto()"> Certificações (ISO) / Supressão</label>
                             </div>
                         </div>
                     </form>
 
-                    <!-- Resumo dos Registros Cadastrados -->
-                    <div class="mt-8">
-                        <div class="flex justify-between items-center mb-3 border-b border-gray-100 pb-1">
-                            <h3 class="font-bold text-sm text-gray-600 uppercase">Registros Coletados</h3>
+                    <div class="mt-6 border-t border-gray-100 pt-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-sm text-gray-600 uppercase">Resumo de Campo</h3>
                             <span class="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600 font-bold" id="contadorRegistros">0 itens</span>
                         </div>
                         <div id="listaRegistros" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
@@ -138,677 +193,933 @@
                 </div>
             </div>
 
-            <!-- ABA PM (ÁGUA) -->
+            <!-- ABA MCE (NOVA) -->
+            <div id="abaMCE" class="tab-content space-y-4">
+                <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-bezerra-verde">
+                    <div class="flex justify-between items-center mb-3 border-b border-gray-100 pb-2">
+                        <h2 class="text-lg font-bold text-gray-800">Memorial de Caracterização do Empreendimento (MCE)</h2>
+                    </div>
+                    <form id="formMCE" class="space-y-3" onchange="salvarMCE()">
+                        <!-- Seção 1: Dados Cadastrais e Dimensionamento -->
+                        <div class="bg-gray-50 rounded-lg border border-gray-200">
+                            <button type="button" onclick="toggleSecao(this)" class="w-full text-left font-bold text-sm text-gray-700 p-3 flex justify-between items-center">1. Dados Cadastrais e Dimensionamento <span>+</span></button>
+                            <div class="collapsible-content p-3 space-y-2" style="display:none;">
+                                <label class="text-xs font-semibold text-gray-600">CNAE Principal</label><input type="text" id="mce_cnae_principal" class="input-field rascunho" oninput="autoSaveRascunho()">
+                                <label class="text-xs font-semibold text-gray-600">CNAEs Secundários</label><input type="text" id="mce_cnae_secundarios" class="input-field rascunho" oninput="autoSaveRascunho()">
+                                <label class="text-xs font-semibold text-gray-600">Área Total do Terreno (m²)</label><input type="text" inputmode="decimal" id="mce_area_total" class="input-field rascunho" oninput="autoSaveRascunho()">
+                                <label class="text-xs font-semibold text-gray-600">Área Total Construída (m²)</label><input type="text" inputmode="decimal" id="mce_area_construida" class="input-field rascunho" oninput="autoSaveRascunho()">
+                                <label class="text-xs font-semibold text-gray-600">Área Útil Ocupada (m²)</label><input type="text" inputmode="decimal" id="mce_area_util" class="input-field rascunho" oninput="autoSaveRascunho()">
+                                <label class="text-xs font-semibold text-gray-600">Regime de Funcionamento (horas/dia, dias/semana, meses/ano)</label><input type="text" id="mce_regime" class="input-field rascunho" oninput="autoSaveRascunho()" placeholder="Ex: 8h/dia, 5d/sem, 12m/ano">
+                                <label class="text-xs font-semibold text-gray-600">Quadro de Funcionários (Produção / Administração)</label><input type="text" id="mce_funcionarios" class="input-field rascunho" oninput="autoSaveRascunho()" placeholder="Ex: 15 produção, 5 admin">
+                            </div>
+                        </div>
+
+                        <!-- Seção 2: Processo Produtivo e Equipamentos -->
+                        <div class="bg-gray-50 rounded-lg border border-gray-200">
+                            <button type="button" onclick="toggleSecao(this)" class="w-full text-left font-bold text-sm text-gray-700 p-3 flex justify-between items-center">2. Processo Produtivo e Equipamentos <span>+</span></button>
+                            <div class="collapsible-content p-3 space-y-2" style="display:none;">
+                                <label class="text-xs font-semibold text-gray-600">Fluxograma de Produção (Esquema de Marcha)</label><textarea id="mce_fluxograma" rows="3" class="input-field resize-none rascunho" oninput="autoSaveRascunho()" placeholder="Descreva o passo a passo da manufatura..."></textarea>
+                                <label class="text-xs font-semibold text-gray-600">Relação de Matérias-Primas e Insumos</label><textarea id="mce_materias_primas" rows="3" class="input-field resize-none rascunho" oninput="autoSaveRascunho()" placeholder="Liste todos os componentes, quantidades mensais e anuais..."></textarea>
+                                <label class="text-xs font-semibold text-gray-600">Produtos Fabricados e Capacidade Máxima</label><textarea id="mce_produtos" rows="2" class="input-field resize-none rascunho" oninput="autoSaveRascunho()" placeholder="Liste o que é produzido e a capacidade instalada..."></textarea>
+                                <label class="text-xs font-semibold text-gray-600">Listagem de Maquinários e Potências</label><textarea id="mce_maquinarios" rows="3" class="input-field resize-none rascunho" oninput="autoSaveRascunho()" placeholder="Ex: Torno CNC 5CV, Prensa 10CV, Caldeira 50kg/h..."></textarea>
+                                <label class="flex items-center gap-2 text-xs font-bold text-red-700 mt-2"><input type="checkbox" id="mce_declaracao_ausencia"> Declaro que NÃO há processos críticos (tratamentos térmicos, banhos químicos, galvanoplastia, pintura líquida)</label>
+                            </div>
+                        </div>
+
+                        <!-- Seção 3: Recursos Hídricos, Efluentes e Saneamento -->
+                        <div class="bg-blue-50 rounded-lg border border-blue-200">
+                            <button type="button" onclick="toggleSecao(this)" class="w-full text-left font-bold text-sm text-blue-900 p-3 flex justify-between items-center">3. Recursos Hídricos, Efluentes e Saneamento <span>+</span></button>
+                            <div class="collapsible-content p-3 space-y-2" style="display:none;">
+                                <label class="text-xs font-semibold text-gray-600">Origem da Água</label><select id="mce_origem_agua" class="input-field rascunho" oninput="autoSaveRascunho()"><option value="">Selecionar...</option><option value="Rede pública">Rede pública (concessionária)</option><option value="Poço artesiano">Poço artesiano</option><option value="Captação superficial">Captação superficial</option></select>
+                                <label class="text-xs font-semibold text-gray-600">Volume Estimado de Consumo (m³/mês)</label><input type="text" inputmode="decimal" id="mce_consumo_agua" class="input-field rascunho" oninput="autoSaveRascunho()">
+                                <label class="text-xs font-semibold text-gray-600">Efluentes Sanitários</label><select id="mce_efluentes_sanitarios" class="input-field rascunho" oninput="autoSaveRascunho()"><option value="">Selecionar...</option><option value="Rede pública">Ligação à rede pública</option><option value="Fossa séptica">Sistema individual (fossa séptica + filtro anaeróbio)</option></select>
+                                <label class="text-xs font-semibold text-gray-600">Efluentes Industriais</label><textarea id="mce_efluentes_industriais" rows="2" class="input-field resize-none rascunho" oninput="autoSaveRascunho()" placeholder="Descreva o sistema (SAO, ETE), volumes lançados e corpo receptor..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Seção 4: Gestão de Resíduos Sólidos e Passivos -->
+                        <div class="bg-amber-50 rounded-lg border border-amber-200">
+                            <button type="button" onclick="toggleSecao(this)" class="w-full text-left font-bold text-sm text-amber-900 p-3 flex justify-between items-center">4. Gestão de Resíduos Sólidos e Passivos <span>+</span></button>
+                            <div class="collapsible-content p-3 space-y-2" style="display:none;">
+                                <label class="text-xs font-semibold text-gray-600">Resíduos Perigosos (Classe I)</label><textarea id="mce_residuos_classe1" rows="2" class="input-field resize-none rascunho" oninput="autoSaveRascunho()" placeholder="Tipos, estimativas de geração..."></textarea>
+                                <label class="text-xs font-semibold text-gray-600">Resíduos Não Perigosos</label><textarea id="mce_residuos_nao_perigosos" rows="2" class="input-field resize-none rascunho" oninput="autoSaveRascunho()" placeholder="Sucatas metálicas, lodos, estopas..."></textarea>
+                                <label class="text-xs font-semibold text-gray-600">Óleo Lubrificante Usado (OLUC)</label><textarea id="mce_oluc" rows="2" class="input-field resize-none rascunho" oninput="autoSaveRascunho()" placeholder="Volume estimado, acondicionamento..."></textarea>
+                                <label class="text-xs font-semibold text-gray-600">Acondicionamento Interno</label><textarea id="mce_acondicionamento" rows="2" class="input-field resize-none rascunho" oninput="autoSaveRascunho()" placeholder="Bacias de contenção, impermeabilização..."></textarea>
+                                <label class="text-xs font-semibold text-gray-600">Destinação Final Prevista</label><textarea id="mce_destinacao" rows="2" class="input-field resize-none rascunho" oninput="autoSaveRascunho()" placeholder="Para onde serão enviados os resíduos..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Seção 5: Emissões Atmosféricas, Ruídos e Vibrações -->
+                        <div class="bg-gray-50 rounded-lg border border-gray-200">
+                            <button type="button" onclick="toggleSecao(this)" class="w-full text-left font-bold text-sm text-gray-700 p-3 flex justify-between items-center">5. Emissões Atmosféricas, Ruídos e Vibrações <span>+</span></button>
+                            <div class="collapsible-content p-3 space-y-2" style="display:none;">
+                                <label class="text-xs font-semibold text-gray-600">Máquinas com Alto Nível de Pressão Sonora</label><textarea id="mce_maquinas_ruido" rows="2" class="input-field resize-none rascunho" oninput="autoSaveRascunho()" placeholder="Liste as máquinas e suas características..."></textarea>
+                                <label class="text-xs font-semibold text-gray-600">Medidas de Mitigação Adotadas</label><textarea id="mce_mitigacao_ruido" rows="2" class="input-field resize-none rascunho" oninput="autoSaveRascunho()" placeholder="Enclausuramento acústico, coxins antivibração..."></textarea>
+                                <label class="flex items-center gap-2 text-xs py-1"><input type="checkbox" id="mce_chamines"> Chaminés / Exaustores presentes?</label>
+                                <label class="flex items-center gap-2 text-xs py-1"><input type="checkbox" id="mce_filtros"> Filtros de manga / Lavadores de gases instalados?</label>
+                                <label class="text-xs font-semibold text-gray-600 mt-2">Detalhamento do Controle de Emissões</label><textarea id="mce_detalhamento_emissoes" rows="2" class="input-field resize-none rascunho" oninput="autoSaveRascunho()" placeholder="Descreva os sistemas de controle de poluição do ar..."></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ABA VISTORIA (mantida integralmente) -->
+            <div id="abaVistoria" class="tab-content space-y-4">
+                <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-bezerra-verde-claro">
+                    <div class="flex justify-between items-center mb-3 border-b border-gray-100 pb-2">
+                        <h2 class="text-lg font-bold text-gray-800">Vistoria Ambiental</h2>
+                        <span class="text-[10px] font-bold text-bezerra-verde" id="progVistoria"></span>
+                    </div>
+                    <form id="formVistoria" class="space-y-3" onchange="salvarVistoria()">
+                        <div class="bg-gray-50 rounded-lg border border-gray-200">
+                            <button type="button" onclick="toggleSecao(this)" class="w-full text-left font-bold text-sm text-gray-700 p-3 flex justify-between items-center">2. Licenciamento Ambiental <span>+</span></button>
+                            <div class="collapsible-content p-3 space-y-2" style="display:none;">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_lic_LP_validade"> Licença Prévia (LP) válida?</label><input type="text" id="v_lic_LP_validade_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_lic_LI_validade"> Licença de Instalação (LI) válida?</label><input type="text" id="v_lic_LI_validade_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_lic_LO_validade"> Licença de Operação (LO) válida?</label><input type="text" id="v_lic_LO_validade_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_lic_condicionantes"> Condicionantes da LO pendentes?</label><input type="text" id="v_lic_condicionantes_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_lic_CTFAPP"> CTF/APP ativo?</label><input type="text" id="v_lic_CTFAPP_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_lic_RAPP"> RAPP entregue?</label><input type="text" id="v_lic_RAPP_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                            </div>
+                        </div>
+                        <div class="bg-blue-50 rounded-lg border border-blue-200">
+                            <button type="button" onclick="toggleSecao(this)" class="w-full text-left font-bold text-sm text-blue-900 p-3 flex justify-between items-center">3. Águas e Efluentes <span>+</span></button>
+                            <div class="collapsible-content p-3 space-y-2" style="display:none;">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_efluentes_outorga"> Outorga de captação/lançamento válida?</label><input type="text" id="v_efluentes_outorga_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_efluentes_ETE"> ETE ou SAO operante?</label><input type="text" id="v_efluentes_ETE_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_efluentes_rede"> Ligação à rede pública?</label><input type="text" id="v_efluentes_rede_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_efluentes_fossa"> Possui fossa/sumidouro?</label><input type="text" id="v_efluentes_fossa_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg border border-gray-200">
+                            <button type="button" onclick="toggleSecao(this)" class="w-full text-left font-bold text-sm text-gray-700 p-3 flex justify-between items-center">4. Emissões Atmosféricas <span>+</span></button>
+                            <div class="collapsible-content p-3 space-y-2" style="display:none;">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_emissoes_chamines"> Chaminés/exaustores presentes?</label><input type="text" id="v_emissoes_chamines_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_emissoes_filtros"> Sistemas de controle (filtros) operantes?</label><input type="text" id="v_emissoes_filtros_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_emissoes_odores"> Odores perceptíveis fora do limite?</label><input type="text" id="v_emissoes_odores_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                            </div>
+                        </div>
+                        <div class="bg-amber-50 rounded-lg border border-amber-200">
+                            <button type="button" onclick="toggleSecao(this)" class="w-full text-left font-bold text-sm text-amber-900 p-3 flex justify-between items-center">5. Resíduos Sólidos (PGRS/CADRI) <span>+</span></button>
+                            <div class="collapsible-content p-3 space-y-2" style="display:none;">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_res_PGRS_atualizado"> PGRS atualizado?</label><input type="text" id="v_res_PGRS_atualizado_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_res_ClasseI"> Geração de Resíduos Classe I?</label><input type="text" id="v_res_ClasseI_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_res_CADRI"> CADRI válido?</label><input type="text" id="v_res_CADRI_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_res_MTR"> MTR/SIGOR ativo?</label><input type="text" id="v_res_MTR_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_res_armazenamento"> Armazenamento adequado (coberto, impermeável)?</label><input type="text" id="v_res_armazenamento_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg border border-gray-200">
+                            <button type="button" onclick="toggleSecao(this)" class="w-full text-left font-bold text-sm text-gray-700 p-3 flex justify-between items-center">6. Solo e Água Subterrânea (GAC) <span>+</span></button>
+                            <div class="collapsible-content p-3 space-y-2" style="display:none;">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_gac_historico"> Histórico de contaminação?</label><input type="text" id="v_gac_historico_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_gac_tanques"> Tanques enterrados/aéreos?</label><input type="text" id="v_gac_tanques_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_gac_pocos"> Poços de monitoramento instalados?</label><input type="text" id="v_gac_pocos_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_gac_fase_livre"> Fase livre (LNAPL/DNAPL) detectada?</label><input type="text" id="v_gac_fase_livre_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                            </div>
+                        </div>
+                        <div class="bg-green-50 rounded-lg border border-green-200">
+                            <button type="button" onclick="toggleSecao(this)" class="w-full text-left font-bold text-sm text-green-900 p-3 flex justify-between items-center">7. Vegetação e Áreas Protegidas <span>+</span></button>
+                            <div class="collapsible-content p-3 space-y-2" style="display:none;">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_veg_supressao"> Supressão vegetal necessária?</label><input type="text" id="v_veg_supressao_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_veg_APP"> APP interferida?</label><input type="text" id="v_veg_APP_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_veg_TCA"> TCA pendente?</label><input type="text" id="v_veg_TCA_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg border border-gray-200">
+                            <button type="button" onclick="toggleSecao(this)" class="w-full text-left font-bold text-sm text-gray-700 p-3 flex justify-between items-center">8. Ruído e Vibração <span>+</span></button>
+                            <div class="collapsible-content p-3 space-y-2" style="display:none;">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_ruido_fontes"> Fontes significativas de ruído?</label><input type="text" id="v_ruido_fontes_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_ruido_laudos"> Laudos de ruído (NBR 10151) em dia?</label><input type="text" id="v_ruido_laudos_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                            </div>
+                        </div>
+                        <div class="bg-red-50 rounded-lg border border-red-200">
+                            <button type="button" onclick="toggleSecao(this)" class="w-full text-left font-bold text-sm text-red-900 p-3 flex justify-between items-center">9. Produtos Químicos <span>+</span></button>
+                            <div class="collapsible-content p-3 space-y-2" style="display:none;">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_quim_contencao"> Armazenamento com contenção secundária?</label><input type="text" id="v_quim_contencao_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_quim_FISPQ"> FISPQ disponíveis?</label><input type="text" id="v_quim_FISPQ_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg border border-gray-200">
+                            <button type="button" onclick="toggleSecao(this)" class="w-full text-left font-bold text-sm text-gray-700 p-3 flex justify-between items-center">12. Aspectos Estruturais e Obras <span>+</span></button>
+                            <div class="collapsible-content p-3 space-y-2" style="display:none;">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_estrut_area"> Área permeável suficiente?</label><input type="text" id="v_estrut_area_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                                <label class="flex items-start gap-2 text-xs py-1"><input type="checkbox" id="v_estrut_drenagem"> Sistema de drenagem adequado?</label><input type="text" id="v_estrut_drenagem_obs" class="input-field text-xs hidden-input mt-1" placeholder="Detalhar...">
+                            </div>
+                        </div>
+                        <div class="pt-2 border-t border-gray-100">
+                            <h3 class="font-bold text-xs text-gray-500 uppercase mb-2">Aspectos Ambientais Personalizados</h3>
+                            <div id="containerAspectosLivres" class="space-y-3"></div>
+                            <button type="button" onclick="adicionarAspectoLivre()" class="w-full mt-2 border border-dashed border-gray-400 text-gray-600 font-bold py-2 rounded text-xs">+ Adicionar Aspecto Específico (ISO/Outros)</button>
+                        </div>
+                        <label class="text-xs font-semibold text-gray-600 mt-4 block">Conclusão / Observações Gerais da Vistoria</label>
+                        <textarea id="vistoriaObs" rows="3" class="input-field resize-none mt-0" placeholder="Resumo e conclusões..."></textarea>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ABA PM (mantida integralmente) -->
             <div id="abaPM" class="tab-content space-y-4">
-                <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-bezerra-azul relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-16 h-16 bg-blue-50 rounded-bl-full -z-0"></div>
-                    <div class="flex items-center gap-2 mb-4 relative z-10">
-                        <h2 class="text-lg font-bold text-bezerra-azul" id="tituloAbaPM">Adicionar Poço (PM)</h2>
-                    </div>
-                    
-                    <form id="formPM" class="relative z-10 space-y-3">
+                <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-bezerra-azul">
+                    <h2 class="text-lg font-bold text-bezerra-azul mb-4" id="tituloAbaPM">Poço de Monitoramento (PM) <span class="tooltip-trigger">?<span class="tooltip-text">Poço para monitoramento de água subterrânea</span></span></h2>
+                    <form id="formPM" class="space-y-1">
                         <input type="hidden" id="pmIndex">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700">ID do Poço *</label>
-                            <input type="text" id="pmId" required placeholder="Ex: PM-01" class="input-field azul">
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700">Nível d'Água (m) *</label>
-                                <input type="text" inputmode="decimal" id="pmNA" required placeholder="0,00" class="input-field azul">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700">Profundidade (m) *</label>
-                                <input type="text" inputmode="decimal" id="pmProf" required placeholder="0,00" class="input-field azul">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700">Fase Livre (cm)</label>
-                            <input type="text" inputmode="decimal" id="pmFase" placeholder="Opcional" class="input-field azul">
-                        </div>
-                        
-                        <!-- Checkbox Fotografia -->
-                        <div class="pt-3 pb-1 border-t border-gray-100 mt-2">
-                            <label class="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
-                                <input type="checkbox" id="pmFoto" class="w-5 h-5 text-bezerra-azul rounded border-gray-300 focus:ring-bezerra-azul">
-                                Registro fotográfico realizado?
-                            </label>
-                            <p class="text-[11px] text-gray-400 mt-1 italic">(Enviar Fotos Posteriormente via Google Drive Indicado)</p>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700">Observações</label>
-                            <textarea id="pmObs" rows="2" placeholder="Odores, cor, avarias..." class="input-field azul resize-none"></textarea>
-                        </div>
-                        
-                        <div class="flex gap-2 pt-2">
-                            <button type="button" onclick="cancelarEdicao('PM')" id="btnCancelaPM" class="hidden w-1/3 bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition">Cancelar</button>
-                            <button type="button" onclick="salvarPM()" id="btnSalvaPM" class="w-full bg-bezerra-azul hover:bg-blue-800 text-white font-bold py-4 rounded-xl shadow-md transition">Salvar Poço</button>
-                        </div>
+                        <label class="text-xs font-semibold text-gray-600">ID do Poço *</label><input type="text" id="pmId" required placeholder="Ex: PM-01" class="input-field azul rascunho" oninput="autoSaveRascunho()">
+                        <div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-semibold text-gray-600">Profundidade (m) *</label><input type="text" inputmode="decimal" id="pmProf" required placeholder="0,00" class="input-field azul rascunho" oninput="autoSaveRascunho()"></div><div><label class="text-xs font-semibold text-gray-600">Nível d'Água (m) *</label><input type="text" inputmode="decimal" id="pmNA" required placeholder="0,00" class="input-field azul rascunho" oninput="autoSaveRascunho()"></div></div>
+                        <div class="mt-2 bg-blue-50 p-3 rounded border border-blue-100"><label class="flex items-center gap-2 text-sm font-bold text-blue-900 cursor-pointer"><input type="checkbox" id="pmTemFaseLivre" class="w-4 h-4" onchange="document.getElementById('divFaseLivre').style.display = this.checked ? 'block' : 'none'"> Apresenta Fase Livre (LNAPL/DNAPL)?</label><div id="divFaseLivre" style="display:none;" class="mt-2"><label class="text-xs font-semibold text-red-600">Espessura da Fase Livre (cm) *</label><input type="text" inputmode="decimal" id="pmEspessuraFase" placeholder="0,0" class="input-field azul border-red-300 mt-0 rascunho" oninput="autoSaveRascunho()"></div></div>
+                        <div class="pt-3 border-t border-gray-100 mt-4"><h4 class="text-sm font-bold text-gray-700 mb-2">Características Construtivas</h4><div class="grid grid-cols-2 gap-2"><label class="flex items-center gap-2 text-xs"><input type="checkbox" id="pmRevestimentoPVC"> Revest. PVC</label><label class="flex items-center gap-2 text-xs"><input type="checkbox" id="pmRevestimentoInox"> Revest. Inox</label><label class="flex items-center gap-2 text-xs"><input type="checkbox" id="pmSeloSanitario"> Selo Sanitário</label><label class="flex items-center gap-2 text-xs"><input type="checkbox" id="pmTampa"> Tampa com cadeado</label></div></div>
+                        <div class="pt-3 pb-1 border-t border-gray-100 mt-2"><label class="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer"><input type="checkbox" id="pmFoto" class="w-5 h-5 text-bezerra-azul rounded"> Registro fotográfico realizado?</label><p class="text-[11px] text-gray-400 mt-1 italic">(Enviar fotos posteriormente via Google Drive)</p></div>
+                        <div class="pt-4 border-t border-gray-100 mt-4"><h4 class="text-sm font-bold text-gray-700 mb-2">Amostras de Água Subterrânea</h4><div id="containerAmostrasAgua" class="space-y-2"></div><button type="button" onclick="adicionarAmostraAgua()" class="w-full mt-2 border border-dashed border-blue-400 text-blue-600 font-bold py-2 rounded text-xs">+ Adicionar Amostra de Água</button></div>
+                        <label class="text-xs font-semibold text-gray-600 block mt-4">Observações Gerais do Poço</label><textarea id="pmObs" rows="2" placeholder="Odores, cor, avarias..." class="input-field azul resize-none mt-0 rascunho" oninput="autoSaveRascunho()"></textarea>
+                        <div class="flex gap-2 pt-4"><button type="button" onclick="cancelarEdicao('PM')" id="btnCancelaPM" class="hidden w-1/3 bg-gray-200 text-gray-700 font-bold py-3 rounded-xl">Cancelar</button><button type="button" onclick="salvarPM()" id="btnSalvaPM" class="w-full bg-bezerra-azul hover:bg-blue-600 text-white font-bold py-4 rounded-xl shadow-md">Salvar Poço</button></div>
                     </form>
                 </div>
             </div>
 
-            <!-- ABA SONDAGEM (TERRA) -->
+            <!-- ABA SONDAGEM (mantida integralmente) -->
             <div id="abaSondagem" class="tab-content space-y-4">
-                <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-solo-marrom relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-16 h-16 bg-orange-50 rounded-bl-full -z-0"></div>
-                    <div class="flex items-center gap-2 mb-4 relative z-10">
-                        <h2 class="text-lg font-bold text-solo-marrom" id="tituloAbaSond">Nova Sondagem</h2>
-                    </div>
-                    
-                    <form id="formSondagem" class="relative z-10 space-y-3">
+                <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-solo-marrom">
+                    <h2 class="text-lg font-bold text-solo-marrom mb-4" id="tituloAbaSond">Sondagem e Solo <span class="tooltip-trigger">?<span class="tooltip-text">Sondagem para caracterização do solo</span></span></h2>
+                    <form id="formSondagem" class="space-y-1">
                         <input type="hidden" id="sondIndex">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700">ID da Sondagem *</label>
-                            <input type="text" id="sondId" required placeholder="Ex: SP-01" class="input-field marrom">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700">Profundidade Total (m) *</label>
-                            <input type="text" inputmode="decimal" id="sondProfTotal" required placeholder="0,00" class="input-field marrom">
-                        </div>
-                        
-                        <h3 class="font-bold text-xs text-gray-500 uppercase mt-5 border-b border-gray-200 pb-1">Perfil Litoestratigráfico</h3>
-                        <div id="containerCamadas" class="space-y-3 mt-2"></div>
-                        <button type="button" onclick="adicionarCamada()" class="w-full mt-2 border border-dashed border-solo-marrom text-solo-marrom font-bold py-2.5 rounded-lg hover:bg-orange-50 transition text-sm">+ Adicionar Camada</button>
-
-                        <!-- Checkbox Fotografia -->
-                        <div class="pt-3 pb-1 border-t border-gray-100 mt-4">
-                            <label class="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
-                                <input type="checkbox" id="sondFoto" class="w-5 h-5 text-solo-marrom rounded border-gray-300 focus:ring-solo-marrom">
-                                Registro fotográfico do solo realizado?
-                            </label>
-                            <p class="text-[11px] text-gray-400 mt-1 italic">(Enviar Fotos Posteriormente via Google Drive Indicado)</p>
-                        </div>
-
-                        <div class="mt-2">
-                            <label class="block text-sm font-semibold text-gray-700">Observações Gerais</label>
-                            <textarea id="sondObs" rows="2" placeholder="Observações..." class="input-field marrom resize-none"></textarea>
-                        </div>
-                        
-                        <div class="flex gap-2 pt-2">
-                            <button type="button" onclick="cancelarEdicao('Sondagem')" id="btnCancelaSond" class="hidden w-1/3 bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition">Cancelar</button>
-                            <button type="button" onclick="salvarSondagem()" id="btnSalvaSond" class="w-full bg-solo-marrom text-white font-bold py-4 rounded-xl shadow-md hover:bg-yellow-900 transition">Salvar Sondagem</button>
-                        </div>
+                        <div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-semibold text-gray-600">ID da Sondagem *</label><input type="text" id="sondId" required placeholder="Ex: ST-01" class="input-field marrom rascunho" oninput="autoSaveRascunho()"></div><div><label class="text-xs font-semibold text-gray-600">Prof. Total (m) *</label><input type="text" inputmode="decimal" id="sondProfTotal" required placeholder="0,00" class="input-field marrom rascunho" oninput="autoSaveRascunho()"></div></div>
+                        <label class="text-xs font-semibold text-gray-600">Método de Perfuração</label><input type="text" id="sondMetodo" placeholder="Ex: Trado manual, Direct Push..." class="input-field marrom rascunho" oninput="autoSaveRascunho()">
+                        <div class="pt-3 border-t border-gray-100 mt-4 bg-gray-50 p-3 rounded"><label class="flex items-center gap-2 text-xs font-bold text-gray-700"><input type="checkbox" id="sondDescontaminado"> Equipamentos descontaminados (NBR 15492)</label><label class="flex items-center gap-2 text-xs font-bold text-gray-700 mt-1"><input type="checkbox" id="sondPIDCalibrado"> PID calibrado (gás padrão isobutileno 100ppm)</label></div>
+                        <div class="pt-4 border-t border-gray-100 mt-2"><h3 class="font-bold text-xs text-gray-500 uppercase mb-2">Perfil Litoestratigráfico</h3><div id="containerCamadas" class="space-y-3"></div><button type="button" onclick="adicionarCamada()" class="w-full mt-2 border border-dashed border-solo-marrom text-solo-marrom font-bold py-2 rounded text-xs">+ Adicionar Camada de Solo</button></div>
+                        <div class="pt-4 border-t border-gray-100 mt-4"><h3 class="font-bold text-xs text-gray-500 uppercase mb-2">Leituras de VOC (PID)</h3><div class="flex items-center gap-2 mb-3 bg-gray-50 p-2 rounded border border-gray-200"><label class="text-xs font-bold text-gray-700">Intervalo:</label><select id="pidIntervalo" class="input-field marrom mt-0 w-auto py-1 px-2 text-xs" onchange="atualizarProfundidadesPID()"><option value="0.5">0,5 em 0,5 m</option><option value="1.0" selected>1,0 em 1,0 m</option></select></div><div id="containerPID" class="space-y-2"></div><button type="button" onclick="adicionarLeituraPID()" class="w-full mt-2 bg-orange-50 text-amber-800 font-bold py-2 rounded text-xs shadow-sm">+ Nova Leitura PID</button></div>
+                        <div class="pt-4 border-t border-gray-100 mt-4"><h3 class="font-bold text-xs text-gray-500 uppercase mb-2">Instalação de Poço de Monitoramento</h3><div class="bg-blue-50 p-3 rounded-lg border border-blue-100 grid grid-cols-2 gap-2"><div><label class="text-[10px] font-bold uppercase">Nome do Poço</label><input type="text" id="sondPocoNome" class="input-field mt-0 py-1 px-2 text-xs rascunho" oninput="autoSaveRascunho()" placeholder="Ex: PM-01"></div><div><label class="text-[10px] font-bold uppercase">Prof. Instalada(m)</label><input type="text" inputmode="decimal" id="sondPocoProf" class="input-field mt-0 py-1 px-2 text-xs rascunho" oninput="autoSaveRascunho()" placeholder="Ex: 5,00"></div><div><label class="text-[10px] font-bold uppercase">Filtro Início(m)</label><input type="text" inputmode="decimal" id="sondPocoFiltroIni" class="input-field mt-0 py-1 px-2 text-xs rascunho" oninput="autoSaveRascunho()" placeholder="Ex: 2,00"></div><div><label class="text-[10px] font-bold uppercase">Filtro Fim(m)</label><input type="text" inputmode="decimal" id="sondPocoFiltroFim" class="input-field mt-0 py-1 px-2 text-xs rascunho" oninput="autoSaveRascunho()" placeholder="Ex: 5,00"></div><div class="col-span-2"><label class="text-[10px] font-bold uppercase">Acabamento Superficial</label><select id="sondAcabamento" class="input-field mt-0 py-1 px-2 text-xs rascunho" oninput="autoSaveRascunho()"><option value="">Selecionar...</option><option value="Câmara de calçada">Câmara de calçada (Flush-mount)</option><option value="Tubo aparente">Tubo de proteção aparente (Stand-pipe)</option></select></div><div><label class="text-[10px] font-bold uppercase">Espessura Selo Bentonita (m)</label><input type="text" inputmode="decimal" id="sondSeloBentonita" class="input-field mt-0 py-1 px-2 text-xs rascunho" oninput="autoSaveRascunho()" placeholder="Ex: 0,30"></div></div></div>
+                        <div class="pt-4 border-t border-gray-100 mt-4"><h3 class="font-bold text-xs text-gray-500 uppercase mb-2">Amostras de Solo (Laboratório)</h3><div id="containerAmostrasSolo" class="space-y-2"></div><button type="button" onclick="adicionarAmostraSolo()" class="w-full mt-2 border border-dashed border-amber-600 text-amber-700 font-bold py-2 rounded text-xs">+ Adicionar Amostra de Solo</button></div>
+                        <div class="pt-3 pb-1 border-t border-gray-100 mt-4"><label class="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer"><input type="checkbox" id="sondFoto" class="w-5 h-5 text-solo-marrom rounded"> Registro fotográfico realizado?</label></div>
+                        <label class="text-xs font-semibold text-gray-600 block mt-4">Observações Gerais</label><textarea id="sondObs" rows="2" placeholder="Restrições, interferências..." class="input-field marrom resize-none mt-0 rascunho" oninput="autoSaveRascunho()"></textarea>
+                        <div class="flex gap-2 pt-4"><button type="button" onclick="cancelarEdicao('Sondagem')" id="btnCancelaSond" class="hidden w-1/3 bg-gray-200 text-gray-700 font-bold py-3 rounded-xl">Cancelar</button><button type="button" onclick="salvarSondagem()" id="btnSalvaSond" class="w-full bg-solo-marrom text-white font-bold py-4 rounded-xl shadow-md">Salvar Sondagem</button></div>
                     </form>
                 </div>
             </div>
 
-            <!-- ABA EXPORTAR -->
+            <!-- ABA EXPORTAR (mantida integralmente) -->
             <div id="abaExportar" class="tab-content space-y-4">
                 <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-gray-400 text-center">
-                    <h2 class="text-xl font-bold text-gray-800 mb-2">Finalizar e Exportar</h2>
-                    <p class="text-sm text-gray-500 mb-6">Escolha o canal para enviar os dados deste projeto.</p>
-                    
-                    <div class="space-y-3">
-                        <button onclick="gerarPDF()" class="w-full bg-red-600 text-white font-bold py-4 rounded-xl shadow hover:bg-red-700 transition flex justify-center items-center gap-2">
-                            📄 Gerar Relatório em PDF
-                        </button>
-                        
-                        <button onclick="exportarCSV()" class="w-full bg-bezerra-verde text-white font-bold py-4 rounded-xl shadow hover:bg-green-800 transition flex justify-center items-center gap-2">
-                            📊 Baixar Planilha (Excel)
-                        </button>
-                        
-                        <button onclick="exportarWhatsApp()" class="w-full bg-[#25D366] text-white font-bold py-4 rounded-xl shadow hover:bg-green-600 transition flex justify-center items-center gap-2">
-                            💬 Enviar Resumo via WhatsApp
-                        </button>
-                    </div>
-
-                    <div class="mt-8 pt-5 border-t border-gray-200">
-                        <button onclick="excluirProjetoAtual()" class="w-full text-red-500 hover:bg-red-50 font-bold text-sm py-3 rounded-lg border border-red-200 transition">Excluir Projeto Definitivamente</button>
+                    <h2 class="text-xl font-bold text-gray-800 mb-2">Exportar Dados</h2>
+                    <div class="grid grid-cols-1 gap-3">
+                        <button onclick="gerarPDF()" class="w-full bg-red-600 text-white font-bold py-4 rounded-lg shadow hover:bg-red-700 transition">📄 Gerar PDF</button>
+                        <button onclick="exportarExcel()" class="w-full bg-bezerra-verde text-white font-bold py-4 rounded-lg shadow hover:bg-green-700 transition">📊 Baixar Excel</button>
+                        <div class="grid grid-cols-2 gap-3"><button onclick="exportarEmail()" class="bg-blue-600 text-white font-bold py-3 rounded-lg shadow hover:bg-blue-700 text-sm">✉️ E-mail</button><button onclick="exportarWhatsApp()" class="bg-[#25D366] text-white font-bold py-3 rounded-lg shadow hover:bg-green-600 text-sm">💬 WhatsApp</button></div>
+                        <button onclick="compartilharDrive()" class="w-full bg-blue-50 text-blue-900 border border-blue-300 font-bold py-3 rounded-lg shadow text-sm">☁️ Salvar no Google Drive</button>
+                        <button onclick="exportarJSON()" class="w-full bg-gray-200 text-gray-800 border border-gray-300 font-bold py-3 rounded-lg shadow hover:bg-gray-300 text-sm mt-6">💾 Backup JSON</button>
                     </div>
                 </div>
             </div>
         </section>
     </main>
 
-    <!-- Rodapé -->
-    <footer class="text-center text-[10px] text-gray-400 py-4 max-w-lg mx-auto w-full">
-        Todos os direitos reservados à Bezerra Ambiental (29.165.656/0001-46) e Bruno Bezerra.
+    <footer class="text-center text-[10px] text-gray-400 py-3 max-w-lg mx-auto w-full border-t border-gray-200">
+        Direitos reservados à Bezerra Ambiental (CNPJ: 29.165.656/0001-46), desenvolvido por Bruno Bezerra (bruno@bezerraambiental.com.br)
     </footer>
 
-    <div id="toast">Ação realizada com sucesso!</div>
+    <div id="toast">Sucesso!</div>
 
     <script>
-        // ========== BANCO DE DADOS LOCAL ==========
-        let projetos = JSON.parse(localStorage.getItem('GeoColeta_Projetos_v2')) || [];
+        // ========== ESTADO GLOBAL ==========
+        let projetos = JSON.parse(localStorage.getItem('BezerraColeta_Projetos_vFinal')) || [];
+        let rascunho = JSON.parse(localStorage.getItem('BezerraColeta_Rascunho_vFinal')) || {};
         let projetoAtualId = null;
 
-        window.onload = () => {
-            renderizarLobby();
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW falhou', err));
-            }
+        // ========== DICIONÁRIO DE VISTORIA ==========
+        const dictVistoria = {
+            "v_lic_LP_validade": "Licença Prévia (LP) válida?",
+            "v_lic_LI_validade": "Licença de Instalação (LI) válida?",
+            "v_lic_LO_validade": "Licença de Operação (LO) válida?",
+            "v_lic_condicionantes": "Condicionantes da LO pendentes?",
+            "v_lic_CTFAPP": "CTF/APP ativo?",
+            "v_lic_RAPP": "RAPP entregue?",
+            "v_efluentes_outorga": "Outorga de captação/lançamento válida?",
+            "v_efluentes_ETE": "ETE ou SAO operante?",
+            "v_efluentes_rede": "Ligação à rede pública?",
+            "v_efluentes_fossa": "Possui fossa/sumidouro?",
+            "v_emissoes_chamines": "Chaminés/exaustores presentes?",
+            "v_emissoes_filtros": "Sistemas de controle (filtros) operantes?",
+            "v_emissoes_odores": "Odores perceptíveis fora do limite?",
+            "v_res_PGRS_atualizado": "PGRS atualizado?",
+            "v_res_ClasseI": "Geração de Resíduos Classe I?",
+            "v_res_CADRI": "CADRI válido?",
+            "v_res_MTR": "MTR/SIGOR ativo?",
+            "v_res_armazenamento": "Armazenamento adequado (coberto, impermeável)?",
+            "v_gac_historico": "Histórico de contaminação?",
+            "v_gac_tanques": "Tanques enterrados/aéreos?",
+            "v_gac_pocos": "Poços de monitoramento instalados?",
+            "v_gac_fase_livre": "Fase livre (LNAPL/DNAPL) detectada?",
+            "v_veg_supressao": "Supressão vegetal necessária?",
+            "v_veg_APP": "APP interferida?",
+            "v_veg_TCA": "TCA pendente?",
+            "v_ruido_fontes": "Fontes significativas de ruído?",
+            "v_ruido_laudos": "Laudos de ruído (NBR 10151) em dia?",
+            "v_quim_contencao": "Armazenamento com contenção secundária?",
+            "v_quim_FISPQ": "FISPQ disponíveis?",
+            "v_estrut_area": "Área permeável suficiente?",
+            "v_estrut_drenagem": "Sistema de drenagem adequado?"
         };
 
-        function showToast(mensagem) {
-            const toast = document.getElementById("toast");
-            toast.innerText = mensagem;
-            toast.className = "show";
-            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 2900);
+        // ========== UTILITÁRIOS ==========
+        function showToast(m) { const t = document.getElementById("toast"); t.innerText = m; t.className = "show"; setTimeout(() => { t.className = t.className.replace("show", ""); }, 2900); }
+        function getBase64LogoFallback() { try { var img = document.getElementById('logoImg'); var c = document.createElement("canvas"); c.width = img.width || 100; c.height = img.height || 100; c.getContext("2d").drawImage(img, 0, 0); return c.toDataURL("image/png"); } catch(e) { return null; } }
+
+        // ========== AUTO-SAVE RASCUNHO ==========
+        function autoSaveRascunho() {
+            document.querySelectorAll('.rascunho').forEach(el => { rascunho[el.id] = el.value; });
+            localStorage.setItem('BezerraColeta_Rascunho_vFinal', JSON.stringify(rascunho));
+        }
+        function restaurarRascunho() {
+            for (let chave in rascunho) { const el = document.getElementById(chave); if (el) el.value = rascunho[chave]; }
+        }
+        function limparRascunho() { rascunho = {}; localStorage.removeItem('BezerraColeta_Rascunho_vFinal'); }
+
+        // ========== TOGGLE SEÇÕES ==========
+        function toggleSecao(btn) {
+            const painel = btn.nextElementSibling;
+            if (painel.style.display === "none" || painel.style.display === "") {
+                painel.style.display = "block";
+                painel.style.maxHeight = "5000px";
+                btn.querySelector('span').innerText = "-";
+            } else {
+                painel.style.display = "none";
+                painel.style.maxHeight = "0";
+                btn.querySelector('span').innerText = "+";
+            }
         }
 
-        // Função para converter logo em Base64 para o PDF
-        function getBase64Image(imgId) {
-            var img = document.getElementById(imgId);
-            var canvas = document.createElement("canvas");
-            canvas.width = img.width;
-            canvas.height = img.height;
-            var ctx = canvas.getContext("2d");
-            ctx.drawImage(img, 0, 0);
-            return canvas.toDataURL("image/png");
+        // ========== GPS ==========
+        function capturarGPS() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => { document.getElementById('projGPS').value = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`; salvarCapaProjeto(); showToast("Coordenadas capturadas!"); },
+                    () => showToast("Erro ao capturar GPS.")
+                );
+            } else showToast("GPS não suportado.");
         }
 
-        // ========== LOBBY E PROJETOS ==========
+        // ========== INICIALIZAÇÃO ==========
+        window.onload = function() {
+            renderizarLobby();
+            restaurarRascunho();
+            if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+        };
+
+        // ========== LOBBY ==========
         function renderizarLobby() {
-            document.getElementById('telaProjeto').classList.remove('active');
-            document.getElementById('telaLobby').classList.add('active');
-            document.getElementById('btnVoltarLobby').classList.add('hidden');
-            document.getElementById('navTabs').classList.add('hidden');
-            document.getElementById('headerSubtitle').innerText = 'Histórico de Projetos';
-
+            document.getElementById('telaProjeto').classList.remove('active'); document.getElementById('telaLobby').classList.add('active');
+            document.getElementById('btnVoltarLobby').classList.add('hidden'); document.getElementById('navTabs').classList.add('hidden');
             const lista = document.getElementById('listaProjetos');
-            if (projetos.length === 0) {
-                lista.innerHTML = '<p class="text-gray-400 text-center text-sm py-4 bg-white rounded-lg border border-dashed">Nenhum projeto no histórico.</p>';
-                return;
+            if (projetos.length === 0) { lista.innerHTML = '<p class="text-gray-400 text-center text-sm py-4">Nenhum projeto no histórico.</p>'; return; }
+            let h = '';
+            for (let i = 0; i < projetos.length; i++) {
+                let p = projetos[i];
+                h += `<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 border-l-4 border-l-bezerra-verde"><div class="flex justify-between items-start"><div><h3 class="font-bold text-gray-800 text-lg">${p.nome || 'Sem Nome'}</h3><p class="text-xs text-gray-400 mt-0.5">${p.numero || '--'} | ${p.data || '--'}</p></div><button onclick="event.stopPropagation(); excluirProjeto(${p.id})" class="text-red-400 hover:bg-red-50 p-2 rounded-full text-sm font-bold">X</button></div><button onclick="abrirProjeto(${p.id})" class="w-full mt-3 text-sm font-bold text-bezerra-verde bg-green-50 hover:bg-green-100 py-2 rounded transition">Abrir Projeto →</button></div>`;
             }
-
-            lista.innerHTML = projetos.map(p => `
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 border-l-4 border-l-bezerra-verde transition">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="font-bold text-gray-800 text-lg">${p.nome || 'Sem Nome'}</h3>
-                            <p class="text-xs text-gray-400 mt-0.5">Nº: ${p.numero || '--'} | Data: ${p.data || '--'}</p>
-                            <p class="text-xs font-semibold text-gray-500 mt-2 uppercase tracking-wide">
-                                <span class="text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">💧 ${p.pms.length} PM</span> &nbsp;
-                                <span class="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">🕳️ ${p.sondagens.length} SOND</span>
-                            </p>
-                        </div>
-                        <button onclick="excluirProjeto(${p.id})" class="text-red-400 hover:bg-red-50 p-2 rounded-full" title="Excluir Projeto">🗑️</button>
-                    </div>
-                    <div class="mt-3 pt-3 border-t border-gray-100">
-                        <button onclick="abrirProjeto(${p.id})" class="w-full text-sm font-bold text-bezerra-verde hover:bg-green-50 py-2 rounded">Abrir Projeto →</button>
-                    </div>
-                </div>
-            `).join('');
+            lista.innerHTML = h;
         }
 
+        function excluirProjeto(id) { if (confirm("Apagar projeto?")) { projetos = projetos.filter(p => p.id !== id); salvarBanco(); renderizarLobby(); showToast("Projeto excluído."); } }
         function novoProjeto() {
-            const nome = prompt('Digite o nome ou cliente do Novo Projeto:');
-            if (!nome || !nome.trim()) return;
-            const novo = {
-                id: Date.now(),
-                nome: nome.trim(),
-                numero: '',
-                data: new Date().toLocaleDateString('pt-BR'),
-                tecnico: '',
-                pms: [],
-                sondagens: []
+            const nome = prompt('Nome do Projeto:'); if (!nome || !nome.trim()) return;
+            const novo = { id: Date.now(), nome: nome.trim(), numero: '', data: new Date().toISOString().split('T')[0], tecnico: '', gps: '', clima: '', obsProjeto: '', CNPJ: '', razaoSocial: '', endereco: '', CNAE: '', matricula: '', contratoSocial: '', procuracao: '', CTFAPP: '', CAR: '', categorias: { gac: false, licenc: false, cadri: false, iso: false }, vistoria: {}, secoesDinamicas: [], pms: [], sondagens: [], mce: {} };
+            projetos.unshift(novo); salvarBanco(); abrirProjeto(novo.id);
+        }
+
+        function importarJSON() {
+            const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0]; if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        if (Array.isArray(data)) data.forEach(p => { if (p.id && p.nome && !projetos.find(x => x.id === p.id)) projetos.unshift(p); });
+                        else if (data.id && data.nome && !projetos.find(x => x.id === data.id)) projetos.unshift(data);
+                        salvarBanco(); renderizarLobby(); showToast("Backup importado!");
+                    } catch (err) { showToast("Arquivo inválido."); }
+                };
+                reader.readAsText(file);
             };
-            projetos.unshift(novo);
-            salvarBanco();
-            abrirProjeto(novo.id);
+            input.click();
         }
 
-        function excluirProjeto(id) {
-            if(confirm("ATENÇÃO: Apagar este projeto e todos os seus dados definitivamente?")) {
-                projetos = projetos.filter(p => p.id !== id);
-                salvarBanco();
-                renderizarLobby();
-            }
-        }
-
+        // ========== PROJETO ==========
         function abrirProjeto(id) {
             projetoAtualId = id;
-            const p = projetos.find(x => x.id === projetoAtualId);
-            
-            document.getElementById('projNome').value = p.nome;
+            const p = projetos.find(x => x.id === projetoAtualId); if (!p) return;
+            document.getElementById('projNome').value = p.nome || '';
             document.getElementById('projNumero').value = p.numero || '';
-            
-            // Formatando data pro input type="date" caso seja necessário
-            let dataInput = p.data;
-            if(dataInput && dataInput.includes('/')) {
-                const parts = dataInput.split('/');
-                dataInput = `${parts[2]}-${parts[1]}-${parts[0]}`;
-            }
-            document.getElementById('projData').value = dataInput || '';
+            document.getElementById('projData').value = p.data || '';
             document.getElementById('projTecnico').value = p.tecnico || '';
-
-            document.getElementById('telaLobby').classList.remove('active');
-            document.getElementById('telaProjeto').classList.add('active');
-            document.getElementById('btnVoltarLobby').classList.remove('hidden');
-            document.getElementById('navTabs').classList.remove('hidden');
-            document.getElementById('navTabs').classList.add('flex');
-            
-            mudarAba('abaProjeto');
-            atualizarDashboard();
+            document.getElementById('projGPS').value = p.gps || '';
+            document.getElementById('projClima').value = p.clima || '';
+            document.getElementById('projObs').value = p.obsProjeto || '';
+            document.getElementById('projCNPJ').value = p.CNPJ || '';
+            document.getElementById('projRazaoSocial').value = p.razaoSocial || '';
+            document.getElementById('projEndereco').value = p.endereco || '';
+            document.getElementById('projCNAE').value = p.CNAE || '';
+            document.getElementById('projMatricula').value = p.matricula || '';
+            document.getElementById('projContratoSocial').value = p.contratoSocial || '';
+            document.getElementById('projProcuracao').value = p.procuracao || '';
+            document.getElementById('projCTFAPP').value = p.CTFAPP || '';
+            document.getElementById('projCAR').value = p.CAR || '';
+            document.getElementById('chkGAC').checked = !!(p.categorias && p.categorias.gac);
+            document.getElementById('chkLicenc').checked = !!(p.categorias && p.categorias.licenc);
+            document.getElementById('chkCADRI').checked = !!(p.categorias && p.categorias.cadri);
+            document.getElementById('chkISO').checked = !!(p.categorias && p.categorias.iso);
+            // Vistoria
+            document.querySelectorAll('#formVistoria input[type="checkbox"]').forEach(cb => { cb.checked = !!(p.vistoria && p.vistoria[cb.id]); toggleDisplayInputVistoria(cb); });
+            document.querySelectorAll('#formVistoria input[type="text"].hidden-input').forEach(inp => { inp.value = (p.vistoria && p.vistoria[inp.id]) || ''; });
+            document.getElementById('vistoriaObs').value = (p.vistoria && p.vistoria.obs) || '';
+            document.getElementById('containerAspectosLivres').innerHTML = '';
+            if(p.secoesDinamicas) p.secoesDinamicas.forEach(s => adicionarAspectoLivre(s.tit, s.obs));
+            // MCE
+            if(p.mce) {
+                document.getElementById('mce_cnae_principal').value = p.mce.cnae_principal || '';
+                document.getElementById('mce_cnae_secundarios').value = p.mce.cnae_secundarios || '';
+                document.getElementById('mce_area_total').value = p.mce.area_total || '';
+                document.getElementById('mce_area_construida').value = p.mce.area_construida || '';
+                document.getElementById('mce_area_util').value = p.mce.area_util || '';
+                document.getElementById('mce_regime').value = p.mce.regime || '';
+                document.getElementById('mce_funcionarios').value = p.mce.funcionarios || '';
+                document.getElementById('mce_fluxograma').value = p.mce.fluxograma || '';
+                document.getElementById('mce_materias_primas').value = p.mce.materias_primas || '';
+                document.getElementById('mce_produtos').value = p.mce.produtos || '';
+                document.getElementById('mce_maquinarios').value = p.mce.maquinarios || '';
+                document.getElementById('mce_declaracao_ausencia').checked = !!p.mce.declaracao_ausencia;
+                document.getElementById('mce_origem_agua').value = p.mce.origem_agua || '';
+                document.getElementById('mce_consumo_agua').value = p.mce.consumo_agua || '';
+                document.getElementById('mce_efluentes_sanitarios').value = p.mce.efluentes_sanitarios || '';
+                document.getElementById('mce_efluentes_industriais').value = p.mce.efluentes_industriais || '';
+                document.getElementById('mce_residuos_classe1').value = p.mce.residuos_classe1 || '';
+                document.getElementById('mce_residuos_nao_perigosos').value = p.mce.residuos_nao_perigosos || '';
+                document.getElementById('mce_oluc').value = p.mce.oluc || '';
+                document.getElementById('mce_acondicionamento').value = p.mce.acondicionamento || '';
+                document.getElementById('mce_destinacao').value = p.mce.destinacao || '';
+                document.getElementById('mce_maquinas_ruido').value = p.mce.maquinas_ruido || '';
+                document.getElementById('mce_mitigacao_ruido').value = p.mce.mitigacao_ruido || '';
+                document.getElementById('mce_chamines').checked = !!p.mce.chamines;
+                document.getElementById('mce_filtros').checked = !!p.mce.filtros;
+                document.getElementById('mce_detalhamento_emissoes').value = p.mce.detalhamento_emissoes || '';
+            }
+            // Layout
+            document.getElementById('telaLobby').classList.remove('active'); document.getElementById('telaProjeto').classList.add('active');
+            document.getElementById('btnVoltarLobby').classList.remove('hidden'); document.getElementById('navTabs').classList.remove('hidden'); document.getElementById('navTabs').classList.add('flex');
+            mudarAba('abaProjeto'); atualizarDashboard();
+            if (document.getElementById('containerCamadas').innerHTML === '') adicionarCamada();
+            if (document.getElementById('containerPID').innerHTML === '') adicionarLeituraPID(true);
+            sugerirProximoID();
         }
 
-        function irParaLobby() {
-            salvarCapaProjeto(); 
-            projetoAtualId = null;
-            renderizarLobby();
-        }
+        function irParaLobby() { salvarCapaProjeto(); salvarVistoria(); salvarMCE(); projetoAtualId = null; renderizarLobby(); }
+        function salvarBanco() { localStorage.setItem('BezerraColeta_Projetos_vFinal', JSON.stringify(projetos)); }
 
         function salvarCapaProjeto() {
-            const p = projetos.find(x => x.id === projetoAtualId);
-            if(p) {
-                p.nome = document.getElementById('projNome').value;
-                p.numero = document.getElementById('projNumero').value;
-                // Salvar data no formato BR se vier do input
-                const dataRaw = document.getElementById('projData').value;
-                if(dataRaw) {
-                    const d = new Date(dataRaw);
-                    p.data = new Date(d.getTime() + d.getTimezoneOffset() * 60000).toLocaleDateString('pt-BR');
-                }
-                p.tecnico = document.getElementById('projTecnico').value;
-                salvarBanco();
-            }
+            const p = projetos.find(x => x.id === projetoAtualId); if (!p) return;
+            p.nome = document.getElementById('projNome').value; p.numero = document.getElementById('projNumero').value;
+            p.data = document.getElementById('projData').value; p.tecnico = document.getElementById('projTecnico').value;
+            p.gps = document.getElementById('projGPS').value; p.clima = document.getElementById('projClima').value;
+            p.obsProjeto = document.getElementById('projObs').value;
+            p.CNPJ = document.getElementById('projCNPJ').value; p.razaoSocial = document.getElementById('projRazaoSocial').value;
+            p.endereco = document.getElementById('projEndereco').value; p.CNAE = document.getElementById('projCNAE').value;
+            p.matricula = document.getElementById('projMatricula').value; p.contratoSocial = document.getElementById('projContratoSocial').value;
+            p.procuracao = document.getElementById('projProcuracao').value; p.CTFAPP = document.getElementById('projCTFAPP').value; p.CAR = document.getElementById('projCAR').value;
+            p.categorias = { gac: document.getElementById('chkGAC').checked, licenc: document.getElementById('chkLicenc').checked, cadri: document.getElementById('chkCADRI').checked, iso: document.getElementById('chkISO').checked };
+            salvarBanco(); atualizarDashboard();
         }
 
-        function salvarBanco() {
-            localStorage.setItem('GeoColeta_Projetos_v2', JSON.stringify(projetos));
-        }
+        function salvarMCE() {
+    const p = projetos.find(x => x.id === projetoAtualId); if (!p) return;
+    if (!p.mce) p.mce = {};
+    p.mce.cnae_principal = document.getElementById('mce_cnae_principal').value;
+    p.mce.cnae_secundarios = document.getElementById('mce_cnae_secundarios').value;
+    p.mce.area_total = document.getElementById('mce_area_total').value;
+    p.mce.area_construida = document.getElementById('mce_area_construida').value;
+    p.mce.area_util = document.getElementById('mce_area_util').value;
+    p.mce.regime = document.getElementById('mce_regime').value;
+    p.mce.funcionarios = document.getElementById('mce_funcionarios').value;
+    p.mce.fluxograma = document.getElementById('mce_fluxograma').value;
+    p.mce.materias_primas = document.getElementById('mce_materias_primas').value;
+    p.mce.produtos = document.getElementById('mce_produtos').value;
+    p.mce.maquinarios = document.getElementById('mce_maquinarios').value;
+    p.mce.declaracao_ausencia = document.getElementById('mce_declaracao_ausencia').checked;
+    p.mce.origem_agua = document.getElementById('mce_origem_agua').value;
+    p.mce.consumo_agua = document.getElementById('mce_consumo_agua').value;
+    p.mce.efluentes_sanitarios = document.getElementById('mce_efluentes_sanitarios').value;
+    p.mce.efluentes_industriais = document.getElementById('mce_efluentes_industriais').value;
+    p.mce.residuos_classe1 = document.getElementById('mce_residuos_classe1').value;
+    p.mce.residuos_nao_perigosos = document.getElementById('mce_residuos_nao_perigosos').value;
+    p.mce.oluc = document.getElementById('mce_oluc').value;
+    p.mce.acondicionamento = document.getElementById('mce_acondicionamento').value;
+    p.mce.destinacao = document.getElementById('mce_destinacao').value;
+    p.mce.maquinas_ruido = document.getElementById('mce_maquinas_ruido').value;
+    p.mce.mitigacao_ruido = document.getElementById('mce_mitigacao_ruido').value;
+    p.mce.chamines = document.getElementById('mce_chamines').checked;
+    p.mce.filtros = document.getElementById('mce_filtros').checked;
+    p.mce.detalhamento_emissoes = document.getElementById('mce_detalhamento_emissoes').value;
+    salvarBanco();
+}
+        function toggleDisplayInputVistoria(cb) { const inp = document.getElementById(cb.id + '_obs'); if (inp) inp.style.display = cb.checked ? 'block' : 'none'; }
 
-        // ========== NAVEGAÇÃO DE ABAS ==========
         function mudarAba(abaId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById(abaId).classList.add('active');
-            
-            document.querySelectorAll('#navTabs button').forEach(btn => {
-                btn.classList.remove('text-bezerra-verde', 'border-bezerra-verde', 'border-bezerra-azul', 'border-solo-marrom', 'text-gray-800');
-                btn.classList.add('text-gray-400', 'border-transparent');
-            });
-            
-            const btnAtivo = document.getElementById('btn-' + abaId);
-            if (btnAtivo) {
-                btnAtivo.classList.remove('text-gray-400', 'border-transparent');
-                if(abaId === 'abaPM') btnAtivo.classList.add('text-bezerra-azul', 'border-bezerra-azul');
-                else if(abaId === 'abaSondagem') btnAtivo.classList.add('text-solo-marrom', 'border-solo-marrom');
-                else if(abaId === 'abaExportar') btnAtivo.classList.add('text-gray-800', 'border-gray-800');
-                else btnAtivo.classList.add('text-bezerra-verde', 'border-bezerra-verde');
-            }
+            document.querySelectorAll('#navTabs button').forEach(btn => { btn.classList.remove('text-bezerra-verde', 'border-bezerra-verde', 'border-bezerra-azul', 'border-solo-marrom', 'text-gray-800'); btn.classList.add('text-gray-400', 'border-transparent'); });
+            const b = document.getElementById('btn-' + abaId);
+            if (b) { b.classList.remove('text-gray-400', 'border-transparent'); if (abaId === 'abaPM') b.classList.add('text-bezerra-azul', 'border-bezerra-azul'); else if (abaId === 'abaSondagem') b.classList.add('text-solo-marrom', 'border-solo-marrom'); else if (abaId === 'abaExportar') b.classList.add('text-gray-800', 'border-gray-800'); else b.classList.add('text-bezerra-verde', 'border-bezerra-verde'); }
+            if (abaId === 'abaPM' || abaId === 'abaSondagem') sugerirProximoID();
         }
 
-        // ========== GESTÃO DE REGISTROS (RESUMO) ==========
+        function sugerirProximoID() {
+            const p = projetos.find(x => x.id === projetoAtualId); if (!p) return;
+            const pmI = document.getElementById('pmId'); const sondI = document.getElementById('sondId');
+            if (pmI && !pmI.value) pmI.value = "PM-" + String((p.pms ? p.pms.length : 0) + 1).padStart(2, '0');
+            if (sondI && !sondI.value) sondI.value = "ST-" + String((p.sondagens ? p.sondagens.length : 0) + 1).padStart(2, '0');
+        }
+
         function atualizarDashboard() {
-            const p = projetos.find(x => x.id === projetoAtualId);
-            document.getElementById('headerSubtitle').innerText = p.nome || 'Projeto';
-            
-            const total = p.pms.length + p.sondagens.length;
-            document.getElementById('contadorRegistros').innerText = `${total} Itens`;
-
-            let html = '';
-            p.pms.forEach((item, i) => {
-                html += `
-                <div class="bg-gray-50 border border-gray-200 border-l-4 border-l-bezerra-azul p-3 rounded flex justify-between items-center mb-2">
-                    <div><strong class="text-blue-900">${item.id}</strong> <span class="text-gray-500 text-xs ml-1">Prof: ${item.prof}m | NE: ${item.na}m | Foto: ${item.fotografia}</span></div> 
-                    <div>
-                        <button type="button" onclick="editarRegistro('PM', ${i})" class="text-blue-500 text-xs font-bold mr-2 uppercase">Editar</button>
-                        <button type="button" onclick="removerRegistro('pms', ${i})" class="text-red-500 font-bold px-1">X</button>
-                    </div>
-                </div>`;
-            });
-            p.sondagens.forEach((item, i) => {
-                html += `
-                <div class="bg-gray-50 border border-gray-200 border-l-4 border-l-solo-marrom p-3 rounded flex justify-between items-center mb-2">
-                    <div><strong class="text-amber-900">${item.id}</strong> <span class="text-gray-500 text-xs ml-1">Prof: ${item.profTotal}m | Foto: ${item.fotografia}</span></div> 
-                    <div>
-                        <button type="button" onclick="editarRegistro('Sondagem', ${i})" class="text-amber-700 text-xs font-bold mr-2 uppercase">Editar</button>
-                        <button type="button" onclick="removerRegistro('sondagens', ${i})" class="text-red-500 font-bold px-1">X</button>
-                    </div>
-                </div>`;
-            });
-            
-            document.getElementById('listaRegistros').innerHTML = html || '<p class="text-gray-400 text-xs text-center py-4">Nenhum PM ou Sondagem registrado.</p>';
+            const p = projetos.find(x => x.id === projetoAtualId); if (!p) return;
+            let c = 0; if (p.nome) c++; if (p.data) c++; if (p.tecnico) c++; if (p.gps) c++;
+            document.getElementById('progressoGeral').innerText = Math.round((c / 4) * 100) + "%";
+            document.getElementById('barraProgresso').style.width = Math.round((c / 4) * 100) + "%";
+            let v = 0; if (p.vistoria) { Object.keys(p.vistoria).forEach(k => { if (p.vistoria[k] === true || (typeof p.vistoria[k] === 'string' && p.vistoria[k].trim() !== '')) v++; }); }
+            if (p.secoesDinamicas && p.secoesDinamicas.length > 0) v++;
+            document.getElementById('progVistoria').innerText = v > 0 ? "Preenchido" : "Vazio";
+            const tPM = p.pms ? p.pms.length : 0; const tSond = p.sondagens ? p.sondagens.length : 0;
+            document.getElementById('contadorRegistros').innerText = (tPM + tSond) + " Itens";
+            let h = '';
+            if (p.pms) p.pms.forEach((i, idx) => h += `<div class="bg-blue-50 border-l-4 border-l-bezerra-azul p-2 mb-1 flex justify-between rounded text-sm"><span class="font-bold text-blue-900">${i.id}</span><div><button onclick="editarRegistro('PM',${idx})" class="text-xs font-bold text-blue-500 uppercase mr-2">Editar</button><button onclick="clonarRegistro('PM',${idx})" class="text-xs font-bold text-gray-500 mr-2">📑</button><button onclick="removerRegistro('pms',${idx})" class="text-xs font-bold text-red-500">X</button></div></div>`);
+            if (p.sondagens) p.sondagens.forEach((i, idx) => h += `<div class="bg-orange-50 border-l-4 border-l-solo-marrom p-2 mb-1 flex justify-between rounded text-sm"><span class="font-bold text-amber-900">${i.id}</span><div><button onclick="editarRegistro('Sond',${idx})" class="text-xs font-bold text-amber-700 uppercase mr-2">Editar</button><button onclick="clonarRegistro('Sond',${idx})" class="text-xs font-bold text-gray-500 mr-2">📑</button><button onclick="removerRegistro('sondagens',${idx})" class="text-xs font-bold text-red-500">X</button></div></div>`);
+            document.getElementById('listaRegistros').innerHTML = h || '<p class="text-xs text-gray-400">Vazio.</p>';
         }
 
-        function removerRegistro(tipo, index) {
-            if (!confirm('Excluir permanentemente este registro?')) return;
-            const p = projetos.find(x => x.id === projetoAtualId);
-            p[tipo].splice(index, 1);
-            salvarBanco();
-            atualizarDashboard();
-            showToast("Excluído com sucesso.");
+        function removerRegistro(tipo, index) { if (!confirm('Excluir permanentemente?')) return; const p = projetos.find(x => x.id === projetoAtualId); if (!p) return; if (tipo === 'pms') p.pms.splice(index, 1); else if (tipo === 'sondagens') p.sondagens.splice(index, 1); salvarBanco(); atualizarDashboard(); showToast("Registro excluído."); }
+        function clonarRegistro(tipo, idx) {
+            const p = projetos.find(x => x.id === projetoAtualId); if (!p) return;
+            if (tipo === 'PM') { const original = p.pms[idx]; const clone = JSON.parse(JSON.stringify(original)); clone.id = "PM-" + String((p.pms ? p.pms.length : 0) + 1).padStart(2, '0'); p.pms.push(clone); }
+            else { const original = p.sondagens[idx]; const clone = JSON.parse(JSON.stringify(original)); clone.id = "ST-" + String((p.sondagens ? p.sondagens.length : 0) + 1).padStart(2, '0'); p.sondagens.push(clone); }
+            salvarBanco(); atualizarDashboard(); showToast("Registro duplicado!");
         }
 
-        function excluirProjetoAtual() {
-            if (!confirm('ATENÇÃO: Deseja EXCLUIR DEFINITIVAMENTE este projeto e todos os seus registros?')) return;
-            projetos = projetos.filter(x => x.id !== projetoAtualId);
-            salvarBanco();
-            irParaLobby();
-            showToast("Projeto deletado.");
+        function adicionarAspectoLivre(tit = '', obs = '') {
+            const div = document.createElement('div');
+            div.className = 'bg-white border border-gray-300 p-2 rounded relative pt-6 shadow-sm';
+            div.innerHTML = `<button onclick="this.parentElement.remove(); salvarVistoria()" class="absolute top-1 right-2 text-red-500 font-bold">&times;</button><input type="text" class="l-tit input-field mt-0 py-1 px-2 text-xs font-bold w-full" placeholder="Título" value="${tit}" onchange="salvarVistoria()"><textarea class="l-obs input-field mt-1 py-1 px-2 text-xs w-full resize-none" rows="2" placeholder="Observação..." onchange="salvarVistoria()">${obs}</textarea>`;
+            document.getElementById('containerAspectosLivres').appendChild(div);
         }
 
-        // ========== EDIÇÃO DE REGISTROS ==========
-        function editarRegistro(tipo, index) {
+        function salvarVistoria() {
+            const p = projetos.find(x => x.id === projetoAtualId); if (!p) return;
+            if (!p.vistoria) p.vistoria = {};
+            document.querySelectorAll('#formVistoria input[type="checkbox"]').forEach(cb => { p.vistoria[cb.id] = cb.checked; toggleDisplayInputVistoria(cb); });
+            document.querySelectorAll('#formVistoria input[type="text"].hidden-input').forEach(inp => { p.vistoria[inp.id] = inp.value; });
+            p.vistoria.obs = document.getElementById('vistoriaObs').value;
+            p.secoesDinamicas = [];
+            document.querySelectorAll('#containerAspectosLivres > div').forEach(el => { p.secoesDinamicas.push({ tit: el.querySelector('.l-tit').value, obs: el.querySelector('.l-obs').value }); });
+            salvarBanco(); atualizarDashboard();
+        }
+
+        // ========== CAMADAS ==========
+        function adicionarCamada(ini = '', fim = '', desc = '', lit = {}) {
+            lit = lit || {};
+            const munsellOptions = `<option value="">Selecione a Cor Munsell</option><optgroup label="🔴 Matizes Vermelhas"><option value="Vermelho">Vermelho</option><option value="Vermelho-escuro">Vermelho-escuro</option><option value="Vermelho-pálido">Vermelho-pálido</option></optgroup><optgroup label="🟠 Vermelho-Amareladas"><option value="Vermelho-acastanhado">Vermelho-acastanhado</option><option value="Vermelho-amarelado">Vermelho-amarelado</option><option value="Marrom-avermelhado">Marrom-avermelhado</option><option value="Marrom-avermelhado-escuro">Marrom-avermelhado-escuro</option></optgroup><optgroup label="🟤 Amarelo-Avermelhadas"><option value="Marrom (Brown)">Marrom</option><option value="Marrom-escuro">Marrom-escuro</option><option value="Marrom-forte">Marrom-forte</option><option value="Marrom-claro-acinzentado">Marrom-claro-acinzentado</option></optgroup><optgroup label="🟡 Amarelo-Marrons"><option value="Marrom-amarelado">Marrom-amarelado</option><option value="Marrom-amarelado-escuro">Marrom-amarelado-escuro</option><option value="Marrom-claro">Marrom-claro</option><option value="Amarelo (Yellow)">Amarelo</option><option value="Amarelo-pálido">Amarelo-pálido</option><option value="Brunáceo / Bruno">Brunáceo / Bruno</option></optgroup><optgroup label="⚪ Escala Neutra e Claras"><option value="Branco (White)">Branco</option><option value="Cinzento-muito-claro">Cinzento-muito-claro</option><option value="Cinzento-claro">Cinzento-claro</option></optgroup><optgroup label="🟢 Cores Hidromórficas (Gley)"><option value="Cinzento (Gray)">Cinzento</option><option value="Cinzento-escuro">Cinzento-escuro</option><option value="Preto (Black)">Preto</option><option value="Cinzento-esverdeado">Cinzento-esverdeado</option><option value="Cinzento-azulado">Cinzento-azulado</option></optgroup>`;
+            const div = document.createElement('div'); div.className = 'camada bg-white p-3 rounded-lg border border-gray-200 shadow-sm relative pt-6';
+            div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-1 right-2 text-red-500 font-bold">&times;</button><div class="flex gap-2 mb-1"><div><label class="text-[10px] font-bold uppercase text-gray-500">Início (m)</label><input type="text" inputmode="decimal" class="c-ini input-field mt-0 py-1 px-2 text-sm w-full rascunho" oninput="autoSaveRascunho()" value="${ini}"></div><div><label class="text-[10px] font-bold uppercase text-gray-500">Fim (m)</label><input type="text" inputmode="decimal" class="c-fim input-field mt-0 py-1 px-2 text-sm w-full rascunho" oninput="autoSaveRascunho()" value="${fim}"></div></div><div><label class="text-[10px] font-bold uppercase text-gray-500">Descrição</label><input type="text" class="c-desc input-field mt-0 py-1 px-2 text-sm w-full rascunho" oninput="autoSaveRascunho()" placeholder="Ex: Argila siltosa..." value="${desc}"></div><button type="button" onclick="toggleLitologia(this)" class="text-xs text-solo-marrom font-bold mt-2 hover:underline">+ Detalhar Litologia</button><div class="collapsible-content space-y-2 mt-2 border-l-2 border-solo-marrom pl-2"><select class="c-cor input-field mt-0 py-1 px-2 text-xs w-full bg-gray-50">${munsellOptions}</select><div class="grid grid-cols-2 gap-2 bg-gray-50 p-2 rounded"><label class="flex items-center gap-1 text-[11px]"><input type="checkbox" data-lit="aterro" ${lit.aterro?'checked':''}> Aterro</label><label class="flex items-center gap-1 text-[11px]"><input type="checkbox" data-lit="argila" ${lit.argila?'checked':''}> Argila</label><label class="flex items-center gap-1 text-[11px]"><input type="checkbox" data-lit="silte" ${lit.silte?'checked':''}> Silte</label><label class="flex items-center gap-1 text-[11px]"><input type="checkbox" data-lit="areia" ${lit.areia?'checked':''}> Areia</label><label class="flex items-center gap-1 text-[11px]"><input type="checkbox" data-lit="pedras" ${lit.pedras?'checked':''}> Com Pedras</label><label class="flex items-center gap-1 text-[11px]"><input type="checkbox" data-lit="seixos" ${lit.seixos?'checked':''}> Com Seixos</label></div><div class="grid grid-cols-3 gap-2 bg-blue-50 p-2 rounded border border-blue-100"><label class="flex items-center gap-1 text-[11px] font-bold text-blue-900"><input type="checkbox" data-lit="seco" ${lit.seco?'checked':''}> Seco</label><label class="flex items-center gap-1 text-[11px] font-bold text-blue-900"><input type="checkbox" data-lit="umido" ${lit.umido?'checked':''}> Úmido</label><label class="flex items-center gap-1 text-[11px] font-bold text-blue-900"><input type="checkbox" data-lit="saturado" ${lit.saturado?'checked':''}> Saturado</label></div></div>`;
+            if (lit.cor) setTimeout(() => { div.querySelector('.c-cor').value = lit.cor; }, 10);
+            document.getElementById('containerCamadas').appendChild(div);
+        }
+
+        function toggleLitologia(btn) { const p = btn.nextElementSibling; p.classList.toggle('open'); btn.textContent = p.classList.contains('open') ? '- Ocultar' : '+ Detalhar Litologia'; }
+
+        // ========== PID ==========
+        function adicionarLeituraPID(primeira = false, prof = '', val = '') {
+            const c = document.getElementById('containerPID'); const passo = parseFloat((document.getElementById('pidIntervalo').value || '1.0').replace(',', '.'));
+            if (!primeira && prof === '') { const itens = c.querySelectorAll('.pid-item'); if (itens.length > 0) { const lastP = parseFloat(itens[itens.length - 1].querySelector('.p-prof').value.replace(',', '.')); prof = (lastP + passo).toFixed(1).replace('.', ','); } else prof = '0,0'; }
+            if (primeira && prof === '') prof = '0,0';
+            const div = document.createElement('div'); div.className = 'pid-item flex items-center gap-2 bg-white border border-gray-200 p-1.5 rounded shadow-sm';
+            div.innerHTML = `<span class="text-[10px] font-bold text-gray-500 uppercase">Prof(m)</span><input type="text" inputmode="decimal" class="p-prof input-field mt-0 py-1 px-1 text-xs w-16 text-center" value="${prof}"><span class="text-[10px] font-bold text-gray-500 uppercase">PID(ppm)</span><input type="text" inputmode="decimal" class="p-val input-field mt-0 py-1 px-2 text-xs flex-1 rascunho" oninput="autoSaveRascunho()" placeholder="0.0" value="${val}"><button onclick="this.parentElement.remove()" class="text-red-500 font-bold px-2">&times;</button>`;
+            c.appendChild(div);
+        }
+
+        function atualizarProfundidadesPID() { const passo = parseFloat((document.getElementById('pidIntervalo').value || '1.0').replace(',', '.')); let p = 0; document.querySelectorAll('#containerPID .pid-item').forEach(el => { el.querySelector('.p-prof').value = p.toFixed(1).replace('.', ','); p += passo; }); }
+
+        // ========== AMOSTRAS ==========
+        function adicionarAmostraSolo(id = '', data = '', hora = '', prof = '', sqi = '', obs = '') { if (!data) data = new Date().toISOString().split('T')[0]; const div = document.createElement('div'); div.className = 'amostra-solo bg-orange-50 p-2 rounded border border-orange-200 shadow-sm relative pt-6'; div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-1 right-2 text-red-500 font-bold">&times;</button><div class="grid grid-cols-2 gap-2 mb-1"><div><label class="text-[10px] font-bold uppercase">ID (AS-01)</label><input type="text" class="as-id input-field mt-0 py-1 px-2 text-xs font-bold w-full rascunho" oninput="autoSaveRascunho()" value="${id}"></div><div><label class="text-[10px] font-bold uppercase">Prof.(m)</label><input type="text" class="as-prof input-field mt-0 py-1 px-2 text-xs w-full rascunho" oninput="autoSaveRascunho()" value="${prof}"></div></div><div class="grid grid-cols-2 gap-2 mb-1"><div><label class="text-[10px] font-bold uppercase">Data</label><input type="date" class="as-data input-field mt-0 py-1 px-2 text-xs w-full" value="${data}"></div><div><label class="text-[10px] font-bold uppercase">Hora</label><input type="time" class="as-hora input-field mt-0 py-1 px-2 text-xs w-full" value="${hora}"></div></div><input type="text" class="as-sqi input-field mt-0 py-1 px-2 text-xs mb-1 rascunho" oninput="autoSaveRascunho()" placeholder="SQIs (ex: BTEX)" value="${sqi}"><input type="text" class="as-obs input-field mt-0 py-1 px-2 text-xs rascunho" oninput="autoSaveRascunho()" placeholder="Observações" value="${obs}">`; document.getElementById('containerAmostrasSolo').appendChild(div); }
+        function adicionarAmostraAgua(id = '', data = '', hora = '', met = '', param = '') { if (!data) data = new Date().toISOString().split('T')[0]; const div = document.createElement('div'); div.className = 'amostra-agua bg-blue-50 p-2 rounded border border-blue-200 shadow-sm relative pt-6'; div.innerHTML = `<button onclick="this.parentElement.remove()" class="absolute top-1 right-2 text-red-500 font-bold">&times;</button><div class="grid grid-cols-3 gap-2 mb-1"><div><label class="text-[10px] font-bold uppercase">ID (AA-)</label><input type="text" class="aa-id input-field mt-0 py-1 px-2 text-xs font-bold w-full rascunho" oninput="autoSaveRascunho()" value="${id}"></div><div><label class="text-[10px] font-bold uppercase">Data</label><input type="date" class="aa-data input-field mt-0 py-1 px-1 text-xs w-full" value="${data}"></div><div><label class="text-[10px] font-bold uppercase">Hora</label><input type="time" class="aa-hora input-field mt-0 py-1 px-1 text-xs w-full" value="${hora}"></div></div><input type="text" class="aa-met input-field mt-0 py-1 px-2 text-xs mb-1 rascunho" oninput="autoSaveRascunho()" placeholder="Método Purga" value="${met}"><input type="text" class="aa-param input-field mt-0 py-1 px-2 text-xs rascunho" oninput="autoSaveRascunho()" placeholder="Parâmetros" value="${param}">`; document.getElementById('containerAmostrasAgua').appendChild(div); }
+
+        // ========== SALVAR PM ==========
+        function salvarPM() {
+            const id = document.getElementById('pmId').value; if (!id) { alert('ID obrigatório'); return; }
+            if (document.getElementById('pmTemFaseLivre').checked && !document.getElementById('pmEspessuraFase').value.trim()) { alert('Preencha a espessura da fase livre.'); return; }
             const p = projetos.find(x => x.id === projetoAtualId);
-            
+            const amostrasAgua = []; document.querySelectorAll('.amostra-agua').forEach(el => amostrasAgua.push({ id: el.querySelector('.aa-id').value, data: el.querySelector('.aa-data').value, hora: el.querySelector('.aa-hora').value, metodo: el.querySelector('.aa-met').value, param: el.querySelector('.aa-param').value }));
+            const dados = { id, na: document.getElementById('pmNA').value, prof: document.getElementById('pmProf').value, temFase: document.getElementById('pmTemFaseLivre').checked, fase: document.getElementById('pmEspessuraFase').value, obs: document.getElementById('pmObs').value, revestPVC: document.getElementById('pmRevestimentoPVC').checked, revestInox: document.getElementById('pmRevestimentoInox').checked, selo: document.getElementById('pmSeloSanitario').checked, tampa: document.getElementById('pmTampa').checked, fotografia: document.getElementById('pmFoto').checked ? 'Sim' : 'Não', amostrasAgua };
+            const idx = document.getElementById('pmIndex').value;
+            if (idx !== "") p.pms[parseInt(idx)] = dados; else p.pms.push(dados);
+            salvarBanco(); cancelarEdicao('PM'); atualizarDashboard(); limparRascunho(); showToast('Poço Salvo!');
+        }
+
+        function salvarSondagem() {
+            const id = document.getElementById('sondId').value; if (!id) { alert('ID obrigatório'); return; }
+            const profTotal = parseFloat(document.getElementById('sondProfTotal').value.replace(',', '.'));
+            const p = projetos.find(x => x.id === projetoAtualId);
+            const camadas = []; document.querySelectorAll('.camada').forEach(el => { const lit = { cor: el.querySelector('.c-cor').value }; el.querySelectorAll('[data-lit]').forEach(cb => lit[cb.getAttribute('data-lit')] = cb.checked); camadas.push({ ini: el.querySelector('.c-ini').value, fim: el.querySelector('.c-fim').value, desc: el.querySelector('.c-desc').value, lit }); });
+            const pids = []; document.querySelectorAll('.pid-item').forEach(el => { const pv = parseFloat(el.querySelector('.p-prof').value.replace(',', '.')); if (!isNaN(profTotal) && pv > profTotal) { alert(`Leitura PID a ${pv}m ultrapassa a profundidade total de ${profTotal}m.`); return; } pids.push({ prof: el.querySelector('.p-prof').value, val: el.querySelector('.p-val').value }); });
+            const amostrasSolo = []; document.querySelectorAll('.amostra-solo').forEach(el => amostrasSolo.push({ id: el.querySelector('.as-id').value, prof: el.querySelector('.as-prof').value, data: el.querySelector('.as-data').value, hora: el.querySelector('.as-hora').value, sqi: el.querySelector('.as-sqi').value, obs: el.querySelector('.as-obs').value }));
+            const pocoInstalado = { nome: document.getElementById('sondPocoNome').value, prof: document.getElementById('sondPocoProf').value, fIni: document.getElementById('sondPocoFiltroIni').value, fFim: document.getElementById('sondPocoFiltroFim').value, acabamento: document.getElementById('sondAcabamento').value, seloBentonita: document.getElementById('sondSeloBentonita').value };
+            const dados = { id, profTotal: document.getElementById('sondProfTotal').value, metodo: document.getElementById('sondMetodo').value, descontaminado: document.getElementById('sondDescontaminado').checked, pidCalibrado: document.getElementById('sondPIDCalibrado').checked, obs: document.getElementById('sondObs').value, fotografia: document.getElementById('sondFoto').checked ? 'Sim' : 'Não', camadas, pids, amostrasSolo, pocoInstalado };
+            const idx = document.getElementById('sondIndex').value;
+            if (idx !== "") p.sondagens[parseInt(idx)] = dados; else p.sondagens.push(dados);
+            salvarBanco(); cancelarEdicao('Sondagem'); atualizarDashboard(); limparRascunho(); showToast('Sondagem Salva!');
+        }
+
+        // ========== EDIÇÃO ==========
+        function editarRegistro(tipo, idx) {
+            const p = projetos.find(x => x.id === projetoAtualId);
             if (tipo === 'PM') {
-                const item = p.pms[index];
-                document.getElementById('pmIndex').value = index;
-                document.getElementById('pmId').value = item.id;
-                document.getElementById('pmNA').value = item.na;
-                document.getElementById('pmProf').value = item.prof;
-                document.getElementById('pmFase').value = item.fase === '-' ? '' : item.fase;
-                document.getElementById('pmObs').value = item.obs === '-' ? '' : item.obs;
-                document.getElementById('pmFoto').checked = item.fotografia === 'Sim';
-                
-                document.getElementById('tituloAbaPM').innerText = "Editar Poço (PM)";
-                document.getElementById('btnSalvaPM').innerText = "Atualizar Poço";
-                document.getElementById('btnCancelaPM').classList.remove('hidden');
-                mudarAba('abaPM');
-            } 
-            else if (tipo === 'Sondagem') {
-                const item = p.sondagens[index];
-                document.getElementById('sondIndex').value = index;
-                document.getElementById('sondId').value = item.id;
-                document.getElementById('sondProfTotal').value = item.profTotal;
-                document.getElementById('sondObs').value = item.obs === '-' ? '' : item.obs;
+                const item = p.pms[idx]; document.getElementById('pmIndex').value = idx; document.getElementById('pmId').value = item.id; document.getElementById('pmNA').value = item.na; document.getElementById('pmProf').value = item.prof;
+                document.getElementById('pmTemFaseLivre').checked = !!item.temFase; document.getElementById('divFaseLivre').style.display = item.temFase ? 'block' : 'none'; document.getElementById('pmEspessuraFase').value = item.fase || ''; document.getElementById('pmObs').value = item.obs || '';
+                document.getElementById('pmRevestimentoPVC').checked = !!item.revestPVC; document.getElementById('pmRevestimentoInox').checked = !!item.revestInox; document.getElementById('pmSeloSanitario').checked = !!item.selo; document.getElementById('pmTampa').checked = !!item.tampa; document.getElementById('pmFoto').checked = item.fotografia === 'Sim';
+                document.getElementById('containerAmostrasAgua').innerHTML = ''; if (item.amostrasAgua) item.amostrasAgua.forEach(a => adicionarAmostraAgua(a.id, a.data, a.hora, a.metodo, a.param));
+                document.getElementById('btnCancelaPM').classList.remove('hidden'); mudarAba('abaPM');
+            } else {
+                const item = p.sondagens[idx]; document.getElementById('sondIndex').value = idx; document.getElementById('sondId').value = item.id; document.getElementById('sondProfTotal').value = item.profTotal; document.getElementById('sondMetodo').value = item.metodo || ''; document.getElementById('sondObs').value = item.obs || '';
+                document.getElementById('sondDescontaminado').checked = !!item.descontaminado; document.getElementById('sondPIDCalibrado').checked = !!item.pidCalibrado;
                 document.getElementById('sondFoto').checked = item.fotografia === 'Sim';
-                
-                document.getElementById('containerCamadas').innerHTML = '';
-                if(item.camadas && item.camadas.length > 0) {
-                    item.camadas.forEach(c => {
-                        adicionarCamada();
-                        const divs = document.querySelectorAll('.camada');
-                        const last = divs[divs.length - 1];
-                        last.querySelector('.camada-ini').value = c.ini;
-                        last.querySelector('.camada-fim').value = c.fim;
-                        last.querySelector('.camada-desc').value = c.desc;
-                    });
-                } else { adicionarCamada(); }
-
-                document.getElementById('tituloAbaSond').innerText = "Editar Sondagem";
-                document.getElementById('btnSalvaSond').innerText = "Atualizar Sondagem";
-                document.getElementById('btnCancelaSond').classList.remove('hidden');
-                mudarAba('abaSondagem');
+                document.getElementById('sondPocoNome').value = (item.pocoInstalado && item.pocoInstalado.nome) || ''; document.getElementById('sondPocoProf').value = (item.pocoInstalado && item.pocoInstalado.prof) || ''; document.getElementById('sondPocoFiltroIni').value = (item.pocoInstalado && item.pocoInstalado.fIni) || ''; document.getElementById('sondPocoFiltroFim').value = (item.pocoInstalado && item.pocoInstalado.fFim) || '';
+                document.getElementById('sondAcabamento').value = (item.pocoInstalado && item.pocoInstalado.acabamento) || ''; document.getElementById('sondSeloBentonita').value = (item.pocoInstalado && item.pocoInstalado.seloBentonita) || '';
+                document.getElementById('containerCamadas').innerHTML = ''; if (item.camadas) item.camadas.forEach(c => adicionarCamada(c.ini, c.fim, c.desc, c.lit));
+                document.getElementById('containerPID').innerHTML = ''; if (item.pids) item.pids.forEach(pi => adicionarLeituraPID(false, pi.prof, pi.val));
+                document.getElementById('containerAmostrasSolo').innerHTML = ''; if (item.amostrasSolo) item.amostrasSolo.forEach(a => adicionarAmostraSolo(a.id, a.data, a.hora, a.prof, a.sqi, a.obs));
+                document.getElementById('btnCancelaSond').classList.remove('hidden'); mudarAba('abaSondagem');
             }
         }
 
         function cancelarEdicao(tipo) {
-            if(tipo === 'PM') {
-                document.getElementById('formPM').reset();
-                document.getElementById('pmIndex').value = "";
-                document.getElementById('tituloAbaPM').innerText = "Adicionar Poço (PM)";
-                document.getElementById('btnSalvaPM').innerText = "Salvar Poço";
-                document.getElementById('btnCancelaPM').classList.add('hidden');
-            } else {
-                document.getElementById('formSondagem').reset();
-                document.getElementById('sondIndex').value = "";
-                document.getElementById('containerCamadas').innerHTML = '';
-                adicionarCamada();
-                document.getElementById('tituloAbaSond').innerText = "Nova Sondagem";
-                document.getElementById('btnSalvaSond').innerText = "Salvar Sondagem";
-                document.getElementById('btnCancelaSond').classList.add('hidden');
-            }
+            if (tipo === 'PM') { document.getElementById('formPM').reset(); document.getElementById('pmIndex').value = ""; document.getElementById('containerAmostrasAgua').innerHTML = ''; document.getElementById('divFaseLivre').style.display = 'none'; document.getElementById('btnCancelaPM').classList.add('hidden'); }
+            else { document.getElementById('formSondagem').reset(); document.getElementById('sondIndex').value = ""; document.getElementById('containerCamadas').innerHTML = ''; document.getElementById('containerPID').innerHTML = ''; document.getElementById('containerAmostrasSolo').innerHTML = ''; document.getElementById('btnCancelaSond').classList.add('hidden'); }
             mudarAba('abaProjeto');
         }
 
-        // ========== SALVAR POÇO (PM) ==========
-        function salvarPM() {
-            const id = document.getElementById('pmId').value.trim();
-            const prof = document.getElementById('pmProf').value.trim();
-            if (!id || !prof) return alert('Obrigatório informar ID e Profundidade.');
-            
-            const p = projetos.find(x => x.id === projetoAtualId);
-            const indexStr = document.getElementById('pmIndex').value;
-            const fotoMarcada = document.getElementById('pmFoto').checked ? 'Sim' : 'Não';
+        // ========== PDF ==========
+        function gerarPDF() {
+    salvarCapaProjeto(); salvarVistoria(); salvarMCE();
+    const p = projetos.find(x => x.id === projetoAtualId);
+    const { jsPDF } = window.jspdf; const doc = new jsPDF(); let y = 15;
+    const checkY = (add) => { if (y + add > 280) { doc.addPage(); y = 15; } };
+    const logoData = getBase64LogoFallback();
+    if (logoData) { doc.addImage(logoData, 'PNG', (210 - 28) / 2, y, 28, 28); y += 36; } else { doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.text("BEZERRA COLETA", 105, y, { align: "center" }); y += 10; }
+    doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text("RELATÓRIO TÉCNICO DE CAMPO", 105, y, { align: "center" }); y += 10;
+    doc.setFontSize(9); doc.setFont("helvetica", "normal");
+    doc.text(`Projeto: ${p.nome} (${p.numero || '-'})`, 14, y); doc.text(`Data: ${p.data}`, 140, y); y += 5;
+    doc.text(`Técnico: ${p.tecnico}`, 14, y); doc.text(`GPS: ${p.gps}`, 140, y); y += 5;
+    if (p.clima) { doc.text(`Clima: ${p.clima}`, 14, y); y += 5; }
+    doc.line(14, y, 196, y); y += 8;
 
-            const dados = {
-                id,
-                na: document.getElementById('pmNA').value.trim() || '-',
-                prof,
-                fase: document.getElementById('pmFase').value.trim() || '-',
-                fotografia: fotoMarcada,
-                obs: document.getElementById('pmObs').value.trim().replace(/\n/g, ' ') || '-'
-            };
-
-            if (indexStr !== "") { 
-                p.pms[parseInt(indexStr)] = dados;
-                showToast('PM atualizado!');
-            } else { 
-                p.pms.push(dados);
-                showToast('PM salvo com sucesso!');
+    // MCE (COMPLETO)
+    if (p.mce && Object.keys(p.mce).length > 0) {
+        checkY(20); doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+        doc.text("MEMORIAL DE CARACTERIZAÇÃO DO EMPREENDIMENTO (MCE)", 14, y); y += 6;
+        doc.setFontSize(9); doc.setFont("helvetica", "normal");
+        const mceFields = [
+            ["CNAE Principal", p.mce.cnae_principal],
+            ["CNAEs Secundários", p.mce.cnae_secundarios],
+            ["Área Total (m²)", p.mce.area_total],
+            ["Área Construída (m²)", p.mce.area_construida],
+            ["Área Útil (m²)", p.mce.area_util],
+            ["Regime de Funcionamento", p.mce.regime],
+            ["Quadro de Funcionários", p.mce.funcionarios],
+            ["Fluxograma de Produção", p.mce.fluxograma],
+            ["Matérias-Primas e Insumos", p.mce.materias_primas],
+            ["Produtos Fabricados", p.mce.produtos],
+            ["Maquinários e Potências", p.mce.maquinarios],
+            ["Declaração de Ausência de Processos Críticos", p.mce.declaracao_ausencia ? "Sim" : "Não"],
+            ["Origem da Água", p.mce.origem_agua],
+            ["Consumo Estimado (m³/mês)", p.mce.consumo_agua],
+            ["Efluentes Sanitários", p.mce.efluentes_sanitarios],
+            ["Efluentes Industriais", p.mce.efluentes_industriais],
+            ["Resíduos Classe I", p.mce.residuos_classe1],
+            ["Resíduos Não Perigosos", p.mce.residuos_nao_perigosos],
+            ["Óleo Lubrificante Usado (OLUC)", p.mce.oluc],
+            ["Acondicionamento Interno", p.mce.acondicionamento],
+            ["Destinação Final Prevista", p.mce.destinacao],
+            ["Máquinas com Alto Ruído", p.mce.maquinas_ruido],
+            ["Medidas de Mitigação de Ruído", p.mce.mitigacao_ruido],
+            ["Chaminés/Exaustores", p.mce.chamines ? "Sim" : "Não"],
+            ["Filtros/Lavadores de Gases", p.mce.filtros ? "Sim" : "Não"],
+            ["Detalhamento do Controle de Emissões", p.mce.detalhamento_emissoes]
+        ];
+        mceFields.forEach(([label, value]) => {
+            if (value && String(value).trim() !== '') {
+                checkY(6);
+                doc.text(`${label}: ${value}`, 14, y);
+                y += 4;
             }
-            
-            salvarBanco();
-            cancelarEdicao('PM'); 
-            atualizarDashboard();
-        }
+        });
+        y += 4;
+    }
 
-        // ========== CAMADAS DE SONDAGEM ==========
-        function adicionarCamada() {
-            const container = document.getElementById('containerCamadas');
-            const div = document.createElement('div');
-            div.className = 'camada bg-white p-3 rounded-lg border border-amber-200 flex flex-col gap-2 shadow-sm';
-            div.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <span class="font-bold text-[11px] uppercase tracking-wide text-amber-800">Estrato Litológico</span>
-                    <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-400 hover:text-red-600 font-bold text-lg leading-none">&times;</button>
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="text" inputmode="decimal" class="camada-ini input-field marrom mt-0" placeholder="Início (m)">
-                    <input type="text" inputmode="decimal" class="camada-fim input-field marrom mt-0" placeholder="Fim (m)">
-                </div>
-                <input type="text" class="camada-desc input-field marrom mt-0" placeholder="Ex: Argila siltosa...">
-            `;
-            container.appendChild(div);
-        }
+    // Vistoria (com conclusões e itens personalizados)
+    let hasVistoria = false;
+    if (p.vistoria) {
+        Object.keys(p.vistoria).forEach(k => { if (p.vistoria[k] === true) hasVistoria = true; });
+    }
+    if (p.secoesDinamicas && p.secoesDinamicas.length > 0) hasVistoria = true;
+    if (p.vistoria && p.vistoria.obs && p.vistoria.obs.trim() !== '') hasVistoria = true;
 
-        // ========== SALVAR SONDAGEM ==========
-        function salvarSondagem() {
-            const id = document.getElementById('sondId').value.trim();
-            const prof = document.getElementById('sondProfTotal').value.trim();
-            if (!id || !prof) return alert('Obrigatório informar ID e Profundidade.');
-            
-            const camadas = [];
-            document.querySelectorAll('#containerCamadas .camada').forEach(el => {
-                const ini = el.querySelector('.camada-ini').value.trim();
-                const fim = el.querySelector('.camada-fim').value.trim();
-                const desc = el.querySelector('.camada-desc').value.trim();
-                if (ini || fim || desc) camadas.push({ ini, fim, desc });
-            });
-            
-            const p = projetos.find(x => x.id === projetoAtualId);
-            const indexStr = document.getElementById('sondIndex').value;
-            const fotoMarcada = document.getElementById('sondFoto').checked ? 'Sim' : 'Não';
+    if (hasVistoria) {
+        checkY(20); doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+        doc.text("VISTORIA PRELIMINAR", 14, y); y += 6;
+        doc.setFontSize(9); doc.setFont("helvetica", "normal");
 
-            const dados = {
-                id,
-                profTotal: prof,
-                fotografia: fotoMarcada,
-                obs: document.getElementById('sondObs').value.trim().replace(/\n/g, ' ') || '-',
-                camadas
-            };
-
-            if (indexStr !== "") { 
-                p.sondagens[parseInt(indexStr)] = dados;
-                showToast('Sondagem atualizada!');
-            } else {
-                p.sondagens.push(dados);
-                showToast('Sondagem salva!');
+        // Checkboxes do dicionário
+        Object.keys(dictVistoria).forEach(k => {
+            if (p.vistoria && p.vistoria[k]) {
+                let txt = `• ${dictVistoria[k]}`;
+                if (p.vistoria[k + '_obs']) txt += `: ${p.vistoria[k + '_obs']}`;
+                checkY(5);
+                doc.text(txt, 14, y);
+                y += 4;
             }
-            
-            salvarBanco();
-            cancelarEdicao('Sondagem');
-            atualizarDashboard();
-        }
+        });
 
-        // ========== GERAR PDF (NOVIDADE) ==========
-        async function gerarPDF() {
-            salvarCapaProjeto();
-            const p = projetos.find(x => x.id === projetoAtualId);
-            if (!p || (p.pms.length === 0 && p.sondagens.length === 0)) {
-                return alert('Não há dados para exportar neste projeto.');
-            }
-
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            let startY = 20;
-
-            // Tentativa de adicionar a Logo
-            try {
-                const logoData = getBase64Image('logoImg');
-                doc.addImage(logoData, 'PNG', 14, 10, 30, 30);
-                startY = 45;
-            } catch(e) {
-                // Se der erro (ex: offline puro sem cache da imagem), escreve só o nome
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(16);
-                doc.text("BEZERRA AMBIENTAL", 14, 20);
-                startY = 35;
-            }
-
-            // Cabeçalho do Projeto
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("RELATÓRIO DE CAMPO", 14, startY);
-            
-            doc.setFontSize(10);
+        // Itens personalizados
+        if (p.secoesDinamicas && p.secoesDinamicas.length > 0) {
+            checkY(10); doc.setFont("helvetica", "bold");
+            doc.text("Aspectos Personalizados:", 14, y); y += 4;
             doc.setFont("helvetica", "normal");
-            startY += 8;
-            doc.text(`Projeto: ${p.nome || 'Não informado'}`, 14, startY);
-            doc.text(`Número: ${p.numero || 'N/A'}`, 120, startY);
-            startY += 6;
-            doc.text(`Data: ${p.data || 'N/A'}`, 14, startY);
-            doc.text(`Técnico: ${p.tecnico || 'N/A'}`, 120, startY);
-
-            startY += 12;
-
-            // Tabela de Poços (PM)
-            if (p.pms.length > 0) {
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(11);
-                doc.text("POÇOS DE MONITORAMENTO (PM)", 14, startY);
-                
-                doc.autoTable({
-                    startY: startY + 4,
-                    head: [['ID', 'Prof.(m)', 'Nível(m)', 'Fase Livre(cm)', 'Foto', 'Observações']],
-                    body: p.pms.map(pm => [pm.id, pm.prof, pm.na, pm.fase, pm.fotografia, pm.obs]),
-                    theme: 'grid',
-                    headStyles: { fillColor: [21, 101, 192], textColor: 255, fontStyle: 'bold' }, // Azul
-                    styles: { font: 'helvetica', fontSize: 9, cellPadding: 3 }
-                });
-                startY = doc.lastAutoTable.finalY + 15;
-            }
-
-            // Tabela de Sondagens
-            if (p.sondagens.length > 0) {
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(11);
-                doc.text("SONDAGENS E PERFIS", 14, startY);
-                
-                let sondData = [];
-                p.sondagens.forEach(s => {
-                    // Linha de Cabeçalho da Sondagem
-                    sondData.push([{content: `ID: ${s.id} | Prof. Total: ${s.profTotal}m | Foto: ${s.fotografia}`, colSpan: 3, styles: {fillColor: [240, 240, 240], fontStyle: 'bold', textColor: [0,0,0]}}]);
-                    
-                    // Camadas
-                    if (s.camadas && s.camadas.length > 0) {
-                        sondData.push([{content: 'Início (m)', styles: {fontStyle: 'bold'}}, {content: 'Fim (m)', styles: {fontStyle: 'bold'}}, {content: 'Descrição Litológica', styles: {fontStyle: 'bold'}}]);
-                        s.camadas.forEach(c => sondData.push([c.ini, c.fim, c.desc]));
-                    }
-                    // Obs
-                    if (s.obs && s.obs !== '-') {
-                        sondData.push([{content: `Obs: ${s.obs}`, colSpan: 3, styles: {fontStyle: 'italic' }}]);
-                    }
-                });
-
-                doc.autoTable({
-                    startY: startY + 4,
-                    body: sondData,
-                    theme: 'grid',
-                    headStyles: { fillColor: [141, 110, 99] }, // Marrom (não usado diretamente pois construímos o body)
-                    styles: { font: 'helvetica', fontSize: 9, cellPadding: 3 },
-                    didParseCell: function (data) {
-                        // Força a primeira linha de cada sondagem a ter fundo marrom se quiser, 
-                        // mas acima usei cinza para destacar. Vamos manter cinza que fica limpo.
-                    }
-                });
-            }
-
-            // Rodapé
-            const pageCount = doc.internal.getNumberOfPages();
-            for (let i = 1; i <= pageCount; i++) {
-                doc.setPage(i);
-                doc.setFontSize(7);
-                doc.setTextColor(100);
-                doc.text("Todos os direitos reservados à Bezerra Ambiental (29.165.656/0001-46) e Bruno Bezerra.", 14, doc.internal.pageSize.height - 10);
-            }
-
-            // Processo de Compartilhamento/Download
-            const nomeStr = p.nome ? p.nome.replace(/\s+/g, '_') : 'Projeto';
-            const fileName = `Relatorio_${nomeStr}.pdf`;
-            const pdfBlob = doc.output('blob');
-            const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
-            // Se o celular suportar compartilhamento de arquivos (Abre gaveta do Whats, Drive, Email)
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                try {
-                    await navigator.share({
-                        title: 'Relatório Bezerra Ambiental',
-                        text: `Relatório do projeto: ${p.nome}`,
-                        files: [file]
-                    });
-                    showToast("Enviado com sucesso!");
-                } catch (e) {
-                    console.log('Compartilhamento cancelado.');
-                }
-            } else {
-                // PC ou celular antigo: Força o Download
-                doc.save(fileName);
-                alert("O PDF foi baixado! Você pode anexá-lo manualmente no e-mail, WhatsApp ou Google Drive.");
-            }
-        }
-
-        // ========== EXPORTAÇÃO CSV E TEXTO ==========
-        function exportarCSV() {
-            salvarCapaProjeto();
-            const p = projetos.find(x => x.id === projetoAtualId);
-            if (!p || (p.pms.length === 0 && p.sondagens.length === 0)) return alert('Vazio.');
-
-            let csv = '\uFEFF'; 
-            csv += 'N_PROJETO;NOME_PROJETO;DATA;TECNICO;TIPO;ID_PONTO;PROF_TOTAL;NIVEL_AGUA;FASE_LIVRE;INICIO_CAMADA;FIM_CAMADA;DESC_LITOLOGICA;OBSERVACOES;TEVE_FOTO\n';
-            
-            p.pms.forEach(pm => {
-                csv += `"${p.numero}";"${p.nome}";"${p.data}";"${p.tecnico}";PM;${pm.id};${pm.prof};${pm.na};${pm.fase};;;;"${pm.obs}";${pm.fotografia}\n`;
+            p.secoesDinamicas.forEach(sec => {
+                let txt = `• ${sec.tit}: ${sec.obs}`;
+                checkY(5);
+                doc.text(txt, 14, y);
+                y += 4;
             });
-            
-            p.sondagens.forEach(s => {
-                const base = `"${p.numero}";"${p.nome}";"${p.data}";"${p.tecnico}";SONDAGEM;${s.id};${s.profTotal};;;`;
-                if (s.camadas.length === 0) {
-                    csv += `${base};;;"${s.obs}";${s.fotografia}\n`;
-                } else {
-                    s.camadas.forEach((c, idx) => {
-                        if(idx === 0) csv += `${base}${c.ini};${c.fim};"${c.desc}";"${s.obs}";${s.fotografia}\n`;
-                        else csv += `"${p.numero}";"${p.nome}";"${p.data}";"${p.tecnico}";SONDAGEM;${s.id};;;;${c.ini};${c.fim};"${c.desc}";;\n`;
-                    });
-                }
+        }
+
+        // Conclusões
+        if (p.vistoria && p.vistoria.obs && p.vistoria.obs.trim() !== '') {
+            checkY(10); doc.setFont("helvetica", "bold");
+            doc.text("Conclusão / Observações Gerais:", 14, y); y += 4;
+            doc.setFont("helvetica", "normal");
+            const lines = doc.splitTextToSize(p.vistoria.obs, 180);
+            checkY(lines.length * 4);
+            doc.text(lines, 14, y);
+            y += lines.length * 4 + 2;
+        }
+        y += 4;
+    }
+
+    // Sondagens
+    if (p.sondagens && p.sondagens.length > 0) {
+        checkY(20); doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+        doc.text("SONDAGENS", 14, y); y += 6;
+        p.sondagens.forEach(s => {
+            checkY(30); doc.setFont("helvetica", "bold");
+            doc.text(`${s.id} | Prof: ${s.profTotal}m`, 14, y); y += 5;
+            doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+            if (s.camadas) s.camadas.forEach(c => {
+                let t = `  ${c.ini}-${c.fim}m: ${c.desc}`;
+                if (c.lit && c.lit.cor) t += ` (${c.lit.cor})`;
+                doc.text(t, 14, y); y += 3.5;
             });
+            if (s.pids && s.pids.length > 0) {
+                checkY(10); const rows = [];
+                for (let i = 0; i < s.pids.length; i += 2) {
+                    const p1 = s.pids[i]; const p2 = s.pids[i + 1];
+                    rows.push([`${p1.prof}m`, `${p1.val} ppm`, p2 ? `${p2.prof}m` : '', p2 ? `${p2.val} ppm` : '']);
+                }
+                doc.autoTable({
+                    startY: y, head: [['Prof (m)', 'PID (ppm)', 'Prof (m)', 'PID (ppm)']],
+                    body: rows, theme: 'grid',
+                    styles: { font: 'helvetica', fontSize: 7, cellPadding: 1 },
+                    columnStyles: { 0: { halign: 'center' }, 1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'center' } }
+                });
+                y = doc.lastAutoTable.finalY + 5;
+            }
+            if (s.amostrasSolo && s.amostrasSolo.length > 0) {
+                checkY(10); doc.setFont("helvetica", "bold");
+                doc.text("Amostras de Solo:", 14, y); y += 4;
+                doc.setFont("helvetica", "normal");
+                s.amostrasSolo.forEach(a => {
+                    checkY(5);
+                    doc.text(`  • ${a.id} (Prof: ${a.prof}m, Data: ${a.data} ${a.hora})`, 14, y); y += 3.5;
+                    doc.text(`    SQI: ${a.sqi} | Obs: ${a.obs}`, 14, y); y += 3.5;
+                });
+            }
+            y += 3;
+        });
+    }
 
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; 
-            a.download = `Planilha_${p.nome.replace(/\s+/g, '_')}.csv`;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            showToast("Planilha baixada.");
+    // PMs
+    if (p.pms && p.pms.length > 0) {
+        checkY(20); doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+        doc.text("POÇOS DE MONITORAMENTO", 14, y); y += 6;
+        doc.setFontSize(9);
+        p.pms.forEach(pm => {
+            checkY(20); doc.setFont("helvetica", "bold");
+            doc.text(`${pm.id} | Prof: ${pm.prof}m | NA: ${pm.na}m`, 14, y); y += 5;
+            doc.setFont("helvetica", "normal");
+            if (pm.temFase) {
+                doc.setTextColor(220, 38, 38);
+                doc.text(`Fase Livre: ${pm.fase} cm`, 14, y);
+                doc.setTextColor(0); y += 4;
+            }
+            if (pm.amostrasAgua && pm.amostrasAgua.length > 0) {
+                checkY(5); doc.setFont("helvetica", "bold");
+                doc.text("Amostras de Água:", 14, y); y += 4;
+                doc.setFont("helvetica", "normal");
+                pm.amostrasAgua.forEach(a => {
+                    checkY(5);
+                    doc.text(`  • ${a.id} (Data: ${a.data} ${a.hora}) | Purga: ${a.metodo}`, 14, y); y += 3.5;
+                    doc.text(`    Parâmetros: ${a.param}`, 14, y); y += 3.5;
+                });
+            }
+            y += 3;
+        });
+    }
+
+    // Rodapé
+    doc.setFontSize(7); doc.setTextColor(100);
+    doc.text("Direitos reservados à Bezerra Ambiental (CNPJ: 29.165.656/0001-46), desenvolvido por Bruno Bezerra (bruno@bezerraambiental.com.br)", 14, doc.internal.pageSize.height - 10);
+
+    const fileName = `Relatorio_${p.nome.replace(/\s+/g, '')}.pdf`;
+    const pdfBlob = doc.output('blob');
+    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+    if (navigator.share && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: 'Relatório', text: `Projeto ${p.nome}` }).catch(() => { doc.save(fileName); });
+    } else {
+        doc.save(fileName);
+    }
+    showToast("PDF gerado!");
+}
+
+        // ========== EXCEL (com wrap text) ==========
+        function exportarExcel() {
+    salvarCapaProjeto(); salvarMCE(); const p = projetos.find(x => x.id === projetoAtualId); if (!p) return;
+    const wb = XLSX.utils.book_new();
+
+    // Aba Capa
+    let capaData = [
+        ["Projeto", p.nome], ["Número", p.numero], ["Data", p.data], ["Técnico", p.tecnico],
+        ["GPS", p.gps], ["Clima", p.clima], ["CNPJ", p.CNPJ], ["Razão Social", p.razaoSocial],
+        ["Endereço", p.endereco], ["CNAE", p.CNAE], ["Matrícula", p.matricula],
+        ["Contrato Social", p.contratoSocial], ["Procuração", p.procuracao], ["CTF/APP", p.CTFAPP], ["CAR", p.CAR]
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(capaData), "Capa");
+
+    // Aba MCE
+    if (p.mce) {
+        let mceData = [["Seção", "Campo", "Valor"]];
+        const sec1 = [
+            ["1. Dados Cadastrais", "CNAE Principal", p.mce.cnae_principal || ''],
+            ["1. Dados Cadastrais", "CNAEs Secundários", p.mce.cnae_secundarios || ''],
+            ["1. Dados Cadastrais", "Área Total (m²)", p.mce.area_total || ''],
+            ["1. Dados Cadastrais", "Área Construída (m²)", p.mce.area_construida || ''],
+            ["1. Dados Cadastrais", "Área Útil (m²)", p.mce.area_util || ''],
+            ["1. Dados Cadastrais", "Regime", p.mce.regime || ''],
+            ["1. Dados Cadastrais", "Funcionários", p.mce.funcionarios || '']
+        ];
+        const sec2 = [
+            ["2. Processo Produtivo", "Fluxograma", p.mce.fluxograma || ''],
+            ["2. Processo Produtivo", "Matérias-Primas", p.mce.materias_primas || ''],
+            ["2. Processo Produtivo", "Produtos", p.mce.produtos || ''],
+            ["2. Processo Produtivo", "Maquinários", p.mce.maquinarios || ''],
+            ["2. Processo Produtivo", "Declaração Ausência Processos Críticos", p.mce.declaracao_ausencia ? "Sim" : "Não"]
+        ];
+        const sec3 = [
+            ["3. Recursos Hídricos", "Origem da Água", p.mce.origem_agua || ''],
+            ["3. Recursos Hídricos", "Consumo (m³/mês)", p.mce.consumo_agua || ''],
+            ["3. Recursos Hídricos", "Efluentes Sanitários", p.mce.efluentes_sanitarios || ''],
+            ["3. Recursos Hídricos", "Efluentes Industriais", p.mce.efluentes_industriais || '']
+        ];
+        const sec4 = [
+            ["4. Resíduos", "Classe I", p.mce.residuos_classe1 || ''],
+            ["4. Resíduos", "Não Perigosos", p.mce.residuos_nao_perigosos || ''],
+            ["4. Resíduos", "OLUC", p.mce.oluc || ''],
+            ["4. Resíduos", "Acondicionamento", p.mce.acondicionamento || ''],
+            ["4. Resíduos", "Destinação", p.mce.destinacao || '']
+        ];
+        const sec5 = [
+            ["5. Emissões", "Máquinas Ruído", p.mce.maquinas_ruido || ''],
+            ["5. Emissões", "Mitigação", p.mce.mitigacao_ruido || ''],
+            ["5. Emissões", "Chaminés", p.mce.chamines ? "Sim" : "Não"],
+            ["5. Emissões", "Filtros", p.mce.filtros ? "Sim" : "Não"],
+            ["5. Emissões", "Detalhamento", p.mce.detalhamento_emissoes || '']
+        ];
+        mceData = mceData.concat(sec1, sec2, sec3, sec4, sec5);
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mceData), "MCE");
+    }
+
+    // Aba Vistoria
+    let vistData = [["Pergunta / Aspecto", "Resposta", "Observação"]];
+    // Checkboxes do dicionário
+    Object.keys(dictVistoria).forEach(k => {
+        const pergunta = dictVistoria[k];
+        const resposta = (p.vistoria && p.vistoria[k]) ? "Sim" : "Não";
+        const obs = (p.vistoria && p.vistoria[k + '_obs']) || "";
+        vistData.push([pergunta, resposta, obs]);
+    });
+    // Itens personalizados
+    if (p.secoesDinamicas && p.secoesDinamicas.length > 0) {
+        p.secoesDinamicas.forEach(sec => {
+            vistData.push([sec.tit, "Personalizado", sec.obs]);
+        });
+    }
+    // Conclusões
+    if (p.vistoria && p.vistoria.obs && p.vistoria.obs.trim() !== '') {
+        vistData.push(["Observações Gerais da Vistoria", "", p.vistoria.obs]);
+    }
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(vistData), "Vistoria");
+
+    // Aba Sondagens
+    let sondData = [];
+    if (p.sondagens) p.sondagens.forEach(s => {
+        let camadasStr = (s.camadas || []).map(c => `${c.ini}-${c.fim}m: ${c.desc}`).join("\n");
+        let pidsStr = (s.pids || []).map(pi => `${pi.prof}m: ${pi.val}ppm`).join("\n");
+        let amostrasStr = (s.amostrasSolo || []).map(a => `${a.id} (${a.prof}m): ${a.sqi} - ${a.obs}`).join("\n");
+        sondData.push({ ID: s.id, "Prof. Total": s.profTotal, Método: s.metodo, Camadas: camadasStr, PID: pidsStr, Amostras: amostrasStr, Obs: s.obs });
+        sondData.push({}); // linha em branco
+    });
+    if (sondData.length === 0) sondData.push({ Aviso: "Sem sondagens" });
+    let wsSond = XLSX.utils.json_to_sheet(sondData);
+    setWrapText(wsSond, ['Camadas', 'PID', 'Amostras', 'Obs']);
+    XLSX.utils.book_append_sheet(wb, wsSond, "Sondagens");
+
+    // Aba Poços
+    let pmData = [];
+    if (p.pms) p.pms.forEach(pm => {
+        let amostrasStr = (pm.amostrasAgua || []).map(a => `${a.id} (${a.data} ${a.hora}): ${a.param} - Purga: ${a.metodo}`).join("\n");
+        pmData.push({ ID: pm.id, Prof: pm.prof, NA: pm.na, "Fase Livre": pm.fase || "-", Amostras: amostrasStr, Obs: pm.obs });
+        pmData.push({});
+    });
+    if (pmData.length === 0) pmData.push({ Aviso: "Sem poços" });
+    let wsPM = XLSX.utils.json_to_sheet(pmData);
+    setWrapText(wsPM, ['Amostras', 'Obs']);
+    XLSX.utils.book_append_sheet(wb, wsPM, "Poços");
+
+    XLSX.writeFile(wb, `Planilha_${p.nome.replace(/\s+/g, '_')}.xlsx`);
+    showToast("Excel baixado!");
+}
+
+
+        function setWrapText(ws, cols) {
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for (let R = range.s.r; R <= range.e.r; ++R) {
+                for (let C = range.s.c; C <= range.e.c; ++C) {
+                    const cell_address = {c: C, r: R}; const cell_ref = XLSX.utils.encode_cell(cell_address);
+                    if (!ws[cell_ref] || R === 0) continue;
+                    const header_cell = XLSX.utils.encode_cell({c: C, r: 0});
+                    const header = ws[header_cell] ? ws[header_cell].v : '';
+                    if (cols.includes(header)) { ws[cell_ref].s = { alignment: { wrapText: true } }; }
+                }
+            }
         }
 
-        function exportarWhatsApp() {
-            salvarCapaProjeto();
-            const p = projetos.find(x => x.id === projetoAtualId);
-            let txt = `*RELATÓRIO DE CAMPO*\n*PROJETO:* ${p.nome} (Nº ${p.numero})\n*DATA:* ${p.data}\n*TÉCNICO:* ${p.tecnico}\n\n`;
-            txt += `💧 *POÇOS DE MONITORAMENTO (${p.pms.length})*\n`;
-            p.pms.forEach(pm => { txt += `- ${pm.id} (Prof: ${pm.prof}m | NA: ${pm.na}m)\n`; });
-            txt += `\n🕳️ *SONDAGENS (${p.sondagens.length})*\n`;
-            p.sondagens.forEach(s => { txt += `- ${s.id} (Prof: ${s.profTotal}m)\n`; });
-            txt += `\n_Para ver as litologias e os dados completos, acesse o PDF ou a Planilha._`;
-            
-            window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
-        }
+        function exportarWhatsApp() { const p = projetos.find(x => x.id === projetoAtualId); if (!p) return; let t = `*BEZERRA COLETA*\n*${p.nome}*\nData: ${p.data}\nTécnico: ${p.tecnico}\n\n`; if (p.pms) p.pms.forEach(pm => t += `💧 ${pm.id}: Prof ${pm.prof}m, NA ${pm.na}m\n`); if (p.sondagens) p.sondagens.forEach(s => t += `🕳️ ${s.id}: Prof ${s.profTotal}m\n`); window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank'); }
+        function exportarEmail() { const p = projetos.find(x => x.id === projetoAtualId); if (!p) return; window.location.href = `mailto:?subject=Dados de Campo - ${p.nome}&body=Projeto: ${p.nome}%0D%0AData: ${p.data}%0D%0ATécnico: ${p.tecnico}`; }
+        function exportarJSON() { const p = projetos.find(x => x.id === projetoAtualId); if (!p) return; const blob = new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Backup_${p.nome.replace(/\s+/g, '_')}.json`; a.click(); showToast("Backup JSON baixado"); }
+        function compartilharDrive() { alert("DICA: Use 'Gerar PDF' e escolha o Google Drive na gaveta de compartilhamento."); }
     </script>
 </body>
 </html>
