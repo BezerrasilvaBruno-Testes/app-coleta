@@ -114,7 +114,7 @@
         <div class="mt-4">
             <div class="flex justify-between items-center mb-2">
                 <h2 class="text-xs font-bold text-gray-400 uppercase">Histórico de Projetos</h2>
-                <select id="selOrdenacaoLobby" class="text-xs border rounded p-1 bg-white" onchange="renderizarLobby()">
+                <select id="selOrdenacaoLobby" class="text-xs border rounded p-1 bg-white" onchange="salvarPreferenciaOrdenacao(); renderizarLobby()">
                     <option value="data">Ordenar por Data (Recentes)</option>
                     <option value="nome">Ordenar por Nome (A-Z)</option>
                 </select>
@@ -466,8 +466,8 @@
                             <h3 class="font-bold text-xs text-gray-500 uppercase">Leituras de VOC (PID)</h3>
                             <div class="flex items-center gap-1 text-[10px]">
                                 <span>Passo:</span>
-                                <button type="button" onclick="gerarPassosPID(0.5)" class="bg-gray-200 px-2 py-0.5 rounded font-bold">0.5m</button>
-                                <button type="button" onclick="gerarPassosPID(1.0)" class="bg-gray-200 px-2 py-0.5 rounded font-bold">1.0m</button>
+                                <button type="button" onclick="if(confirm('Isso apagará as leituras existentes. Continuar?')) gerarPassosPID(0.5)" class="bg-gray-200 px-2 py-0.5 rounded font-bold">0.5m</button>
+                                <button type="button" onclick="if(confirm('Isso apagará as leituras existentes. Continuar?')) gerarPassosPID(1.0)" class="bg-gray-200 px-2 py-0.5 rounded font-bold">1.0m</button>
                             </div>
                         </div>
                         <div id="containerPID" class="space-y-2"></div>
@@ -567,7 +567,7 @@
             </div>
         </div>
 
-        <!-- ABA POÇO DE VAPORES / SUB-SLAB / AR AMBIENTE (PV / SS / AA COM AMOSTRAS DE VAPOR) -->
+        <!-- ABA POÇO DE VAPORES / SUB-SLAB / AR AMBIENTE -->
         <div id="abaVapores" class="tab-content space-y-4">
             <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-vapores-roxo">
                 <h2 class="text-lg font-bold text-vapores-roxo mb-3">Poço de Vapores / Sub-Slab / Ar Ambiente (PV / SS / AA)</h2>
@@ -617,7 +617,7 @@
             </div>
         </div>
 
-        <!-- ABA ENSAIO DE PERMEABILIDADE (SLUG TEST / BAIL TEST COM LEITURAS DE TEMPO DINÂMICAS) -->
+        <!-- ABA ENSAIO DE PERMEABILIDADE (SLUG TEST) -->
         <div id="abaEnsaio" class="tab-content space-y-4">
             <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-ensaio-ciano">
                 <h2 class="text-lg font-bold text-ensaio-ciano mb-3">Ensaio de Permeabilidade (Slug Test)</h2>
@@ -718,67 +718,48 @@ function obterProjetoAtivo() {
     return null;
 }
 
-// ========== MAPEAMENTO MUNSELL -> RGB TRUECOLOR ==========
+// ========== MAPEAMENTO MUNSELL -> RGB ==========
 const MAPA_MUNSELL_RGB = {
-    "Marrom": "115,89,62",
-    "Marrom-avermelhado": "130,55,40",
-    "Marrom-escuro": "70,50,35",
-    "Marrom-amarelado": "155,120,50",
-    "Vermelho": "180,40,40",
-    "Vermelho-escuro": "120,20,20",
-    "Amarelo": "220,180,40",
-    "Cinzento (Gray)": "128,128,128",
-    "Preto (Black)": "30,30,30",
-    "Branco (White)": "245,245,245",
-    "Brunáceo / Bruno": "140,100,60"
+    "Marrom": "115,89,62", "Marrom-avermelhado": "130,55,40", "Marrom-escuro": "70,50,35",
+    "Marrom-amarelado": "155,120,50", "Vermelho": "180,40,40", "Vermelho-escuro": "120,20,20",
+    "Amarelo": "220,180,40", "Cinzento (Gray)": "128,128,128", "Preto (Black)": "30,30,30",
+    "Branco (White)": "245,245,245", "Brunáceo / Bruno": "140,100,60"
 };
 
 function converterLatLongParaUTM(lat, lon) {
     const a = 6378137.0; const f = 1 / 298.257223563;
     const b = a * (1 - f); const e2 = (a*a - b*b) / (a*a); const e_prime2 = (a*a - b*b) / (b*b);
     const k0 = 0.9996;
-
     const zone = Math.floor((lon + 180) / 6) + 1;
     const lon0 = (zone - 1) * 6 - 180 + 3;
     const lon0_rad = (lon0 * Math.PI) / 180;
-    const lat_rad = (lat * Math.PI) / 180;
-    const lon_rad = (lon * Math.PI) / 180;
-
+    const lat_rad = (lat * Math.PI) / 180; const lon_rad = (lon * Math.PI) / 180;
     const N = a / Math.sqrt(1 - e2 * Math.sin(lat_rad) * Math.sin(lat_rad));
-    const T = Math.pow(Math.tan(lat_rad), 2);
-    const C = e_prime2 * Math.pow(Math.cos(lat_rad), 2);
+    const T = Math.pow(Math.tan(lat_rad), 2); const C = e_prime2 * Math.pow(Math.cos(lat_rad), 2);
     const A = (lon_rad - lon0_rad) * Math.cos(lat_rad);
-
     const M = a * ((1 - e2/4 - 3*e2*e2/64 - 5*e2*e2*e2/256) * lat_rad -
              (3*e2/8 + 3*e2*e2/32 + 45*e2*e2/1024) * Math.sin(2*lat_rad) +
              (15*e2*e2/256 + 45*e2*e2*e2/1024) * Math.sin(4*lat_rad) -
              (35*e2*e2*e2/3072) * Math.sin(6*lat_rad));
-
     let easting = k0 * N * (A + (1 - T + C) * Math.pow(A, 3) / 6 + (5 - 18*T + T*T + 72*C - 58*e_prime2) * Math.pow(A, 5) / 120) + 500000.0;
     let northing = k0 * (M + N * Math.tan(lat_rad) * (A*A / 2 + (5 - T + 9*C + 4*C*C) * Math.pow(A, 4) / 24 + (61 - 58*T + T*T + 600*C - 330*e_prime2) * Math.pow(A, 6) / 720));
-
     if (lat < 0) northing += 10000000.0;
     const hemi = lat < 0 ? 'S' : 'N';
-
     return `UTM ${zone}${hemi} E:${Math.round(easting)}m N:${Math.round(northing)}m`;
 }
 
 function formatarCoordenadasUTM(strCoords) {
     if (!strCoords) return "--";
     const pts = strCoords.split(',').map(s => parseFloat(s.trim()));
-    if (pts.length >= 2 && !isNaN(pts[0]) && !isNaN(pts[1])) {
-        return converterLatLongParaUTM(pts[0], pts[1]);
-    }
+    if (pts.length >= 2 && !isNaN(pts[0]) && !isNaN(pts[1])) return converterLatLongParaUTM(pts[0], pts[1]);
     return strCoords;
 }
 
 function obterCorGradienteVOC(ppm) {
     const val = parseFloat((ppm || "0").replace(',', '.'));
     if (isNaN(val) || val <= 0) return '#10B981';
-    if (val < 10) return '#10B981';
-    if (val < 50) return '#F59E0B';
-    if (val < 200) return '#F97316';
-    return '#EF4444';
+    if (val < 10) return '#10B981'; if (val < 50) return '#F59E0B';
+    if (val < 200) return '#F97316'; return '#EF4444';
 }
 
 function toggleObsItem(cb) {
@@ -811,25 +792,29 @@ function capturarGPS(elementId) {
     } else showToast("GPS não suportado.");
 }
 
+function salvarPreferenciaOrdenacao() {
+    localStorage.setItem('BezerraColeta_OrdenacaoLobby', document.getElementById('selOrdenacaoLobby').value);
+}
+
 window.onload = function() {
+    const ordPref = localStorage.getItem('BezerraColeta_OrdenacaoLobby');
+    if (ordPref) document.getElementById('selOrdenacaoLobby').value = ordPref;
     renderizarLobby(); restaurarRascunho();
     document.getElementById('cameraInput').onchange = processarFotoCapturada;
     document.getElementById('galeriaInput').onchange = processarFotosGaleria;
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 };
 
-// ========== LOBBY & RECURSOS DE EDITAR / DUPLICAR ==========
+// ========== LOBBY ==========
 function renderizarLobby() {
     document.getElementById('telaProjeto').classList.remove('active'); document.getElementById('telaLobby').classList.add('active');
     document.getElementById('btnVoltarLobby').classList.add('hidden'); document.getElementById('navTabs').classList.add('hidden');
     const lista = document.getElementById('listaProjetos');
     if (projetos.length === 0) { lista.innerHTML = '<p class="text-gray-400 text-center text-sm py-4">Nenhum projeto no histórico.</p>'; return; }
-
     const modoOrd = document.getElementById('selOrdenacaoLobby').value;
     let projOrdenados = [...projetos];
     if (modoOrd === 'nome') projOrdenados.sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
     else projOrdenados.sort((a,b) => (b.id || 0) - (a.id || 0));
-
     let h = '';
     for (let i = 0; i < projOrdenados.length; i++) {
         let p = projOrdenados[i];
@@ -842,7 +827,7 @@ function excluirProjeto(id) { if (confirm("Apagar projeto?")) { projetos = proje
 
 function novoProjeto() {
     const nome = prompt('Nome do Projeto:'); if (!nome || !nome.trim()) return;
-    const novo = { id: Date.now(), nome: nome.trim(), numero: '', data: new Date().toISOString().split('T')[0], tecnico: '', gps: '', clima: '', obsProjeto: '', CNPJ: '', razaoSocial: '', endereco: '', vistoria: {}, pms: [], sondagens: [], vapores: [], arboreo: [], ensaios: [], mce: {} };
+    const novo = { id: Date.now(), nome: nome.trim(), numero: '', data: new Date().toISOString().split('T')[0], tecnico: '', gps: '', clima: '', obsProjeto: '', CNPJ: '', razaoSocial: '', endereco: '', CNAE: '', matricula: '', contratoSocial: '', procuracao: '', CTFAPP: '', CAR: '', categorias: {}, vistoria: {}, pms: [], sondagens: [], vapores: [], arboreo: [], ensaios: [], mce: {} };
     projetos.unshift(novo); salvarBanco(); abrirProjeto(novo.id);
 }
 
@@ -883,6 +868,56 @@ function abrirProjeto(id) {
     document.getElementById('projCNPJ').value = p.CNPJ || '';
     document.getElementById('projRazaoSocial').value = p.razaoSocial || '';
     document.getElementById('projEndereco').value = p.endereco || '';
+    document.getElementById('projCNAE').value = p.CNAE || '';
+    document.getElementById('projMatricula').value = p.matricula || '';
+    document.getElementById('projContratoSocial').value = p.contratoSocial || '';
+    document.getElementById('projProcuracao').value = p.procuracao || '';
+    document.getElementById('projCTFAPP').value = p.CTFAPP || '';
+    document.getElementById('projCAR').value = p.CAR || '';
+    document.getElementById('chkGAC').checked = !!(p.categorias && p.categorias.gac);
+    document.getElementById('chkLicenc').checked = !!(p.categorias && p.categorias.licenc);
+    document.getElementById('chkCADRI').checked = !!(p.categorias && p.categorias.cadri);
+    document.getElementById('chkISO').checked = !!(p.categorias && p.categorias.iso);
+
+    document.querySelectorAll('#formVistoria input[type="checkbox"]').forEach(cb => {
+        if (cb.id.startsWith('v_')) { cb.checked = !!(p.vistoria && p.vistoria[cb.id]); toggleObsItem(cb); }
+    });
+    document.querySelectorAll('#formVistoria input[type="text"].hidden-input').forEach(inp => { inp.value = (p.vistoria && p.vistoria[inp.id]) || ''; });
+    document.getElementById('vistoriaObs').value = (p.vistoria && p.vistoria.obs) || '';
+    document.getElementById('vistoriaFoto').checked = (p.vistoria && p.vistoria.fotoRealizada) || false;
+    document.getElementById('containerAspectosLivres').innerHTML = '';
+    if (p.secoesDinamicas) p.secoesDinamicas.forEach(s => adicionarAspectoLivre(s.tit, s.obs));
+
+    if (p.mce) {
+        document.getElementById('mce_cnae_principal').value = p.mce.cnae_principal || '';
+        document.getElementById('mce_cnae_secundarios').value = p.mce.cnae_secundarios || '';
+        document.getElementById('mce_area_total').value = p.mce.area_total || '';
+        document.getElementById('mce_area_construida').value = p.mce.area_construida || '';
+        document.getElementById('mce_area_util').value = p.mce.area_util || '';
+        document.getElementById('mce_regime').value = p.mce.regime || '';
+        document.getElementById('mce_funcionarios').value = p.mce.funcionarios || '';
+        document.getElementById('mce_fluxograma').value = p.mce.fluxograma || '';
+        document.getElementById('mce_materias_primas').value = p.mce.materias_primas || '';
+        document.getElementById('mce_produtos').value = p.mce.produtos || '';
+        document.getElementById('mce_maquinarios').value = p.mce.maquinarios || '';
+        document.getElementById('mce_declaracao_ausencia').checked = !!p.mce.declaracao_ausencia;
+        document.getElementById('mce_origem_agua').value = p.mce.origem_agua || '';
+        document.getElementById('mce_consumo_agua').value = p.mce.consumo_agua || '';
+        document.getElementById('mce_efluentes_sanitarios').value = p.mce.efluentes_sanitarios || '';
+        document.getElementById('mce_efluentes_industriais').value = p.mce.efluentes_industriais || '';
+        document.getElementById('mce_residuos_classe1').value = p.mce.residuos_classe1 || '';
+        document.getElementById('mce_residuos_nao_perigosos').value = p.mce.residuos_nao_perigosos || '';
+        document.getElementById('mce_oluc').value = p.mce.oluc || '';
+        document.getElementById('mce_acondicionamento').value = p.mce.acondicionamento || '';
+        document.getElementById('mce_destinacao').value = p.mce.destinacao || '';
+        document.getElementById('mce_maquinas_ruido').value = p.mce.maquinas_ruido || '';
+        document.getElementById('mce_mitigacao_ruido').value = p.mce.mitigacao_ruido || '';
+        document.getElementById('mce_chamines').checked = !!p.mce.chamines;
+        document.getElementById('mce_filtros').checked = !!p.mce.filtros;
+        document.getElementById('mce_detalhamento_emissoes').value = p.mce.detalhamento_emissoes || '';
+        document.getElementById('mceObs').value = p.mce.obs || '';
+        document.getElementById('mceFoto').checked = !!p.mce.fotoRealizada;
+    }
 
     document.getElementById('telaLobby').classList.remove('active'); document.getElementById('telaProjeto').classList.add('active');
     document.getElementById('btnVoltarLobby').classList.remove('hidden'); document.getElementById('navTabs').classList.remove('hidden'); document.getElementById('navTabs').classList.add('flex');
@@ -901,7 +936,10 @@ function salvarCapaProjeto() {
     p.gps = document.getElementById('projGPS').value; p.clima = document.getElementById('projClima').value;
     p.obsProjeto = document.getElementById('projObs').value;
     p.CNPJ = document.getElementById('projCNPJ').value; p.razaoSocial = document.getElementById('projRazaoSocial').value;
-    p.endereco = document.getElementById('projEndereco').value;
+    p.endereco = document.getElementById('projEndereco').value; p.CNAE = document.getElementById('projCNAE').value;
+    p.matricula = document.getElementById('projMatricula').value; p.contratoSocial = document.getElementById('projContratoSocial').value;
+    p.procuracao = document.getElementById('projProcuracao').value; p.CTFAPP = document.getElementById('projCTFAPP').value; p.CAR = document.getElementById('projCAR').value;
+    p.categorias = { gac: document.getElementById('chkGAC').checked, licenc: document.getElementById('chkLicenc').checked, cadri: document.getElementById('chkCADRI').checked, iso: document.getElementById('chkISO').checked };
     salvarBanco(); atualizarDashboard();
 }
 
@@ -909,8 +947,31 @@ function salvarMCE() {
     const p = obterProjetoAtivo(); if (!p) return;
     if (!p.mce) p.mce = {};
     p.mce.cnae_principal = document.getElementById('mce_cnae_principal').value;
+    p.mce.cnae_secundarios = document.getElementById('mce_cnae_secundarios').value;
     p.mce.area_total = document.getElementById('mce_area_total').value;
+    p.mce.area_construida = document.getElementById('mce_area_construida').value;
+    p.mce.area_util = document.getElementById('mce_area_util').value;
+    p.mce.regime = document.getElementById('mce_regime').value;
+    p.mce.funcionarios = document.getElementById('mce_funcionarios').value;
+    p.mce.fluxograma = document.getElementById('mce_fluxograma').value;
+    p.mce.materias_primas = document.getElementById('mce_materias_primas').value;
+    p.mce.produtos = document.getElementById('mce_produtos').value;
+    p.mce.maquinarios = document.getElementById('mce_maquinarios').value;
+    p.mce.declaracao_ausencia = document.getElementById('mce_declaracao_ausencia').checked;
     p.mce.origem_agua = document.getElementById('mce_origem_agua').value;
+    p.mce.consumo_agua = document.getElementById('mce_consumo_agua').value;
+    p.mce.efluentes_sanitarios = document.getElementById('mce_efluentes_sanitarios').value;
+    p.mce.efluentes_industriais = document.getElementById('mce_efluentes_industriais').value;
+    p.mce.residuos_classe1 = document.getElementById('mce_residuos_classe1').value;
+    p.mce.residuos_nao_perigosos = document.getElementById('mce_residuos_nao_perigosos').value;
+    p.mce.oluc = document.getElementById('mce_oluc').value;
+    p.mce.acondicionamento = document.getElementById('mce_acondicionamento').value;
+    p.mce.destinacao = document.getElementById('mce_destinacao').value;
+    p.mce.maquinas_ruido = document.getElementById('mce_maquinas_ruido').value;
+    p.mce.mitigacao_ruido = document.getElementById('mce_mitigacao_ruido').value;
+    p.mce.chamines = document.getElementById('mce_chamines').checked;
+    p.mce.filtros = document.getElementById('mce_filtros').checked;
+    p.mce.detalhamento_emissoes = document.getElementById('mce_detalhamento_emissoes').value;
     p.mce.obs = document.getElementById('mceObs').value;
     p.mce.fotoRealizada = document.getElementById('mceFoto').checked;
     salvarBanco();
@@ -919,9 +980,20 @@ function salvarMCE() {
 function salvarVistoria() {
     const p = obterProjetoAtivo(); if (!p) return;
     if (!p.vistoria) p.vistoria = {};
+    document.querySelectorAll('#formVistoria input[type="checkbox"]').forEach(cb => {
+        if (cb.id.startsWith('v_')) {
+            p.vistoria[cb.id] = cb.checked;
+            const obsInput = document.getElementById(cb.id + '_obs');
+            if (obsInput) p.vistoria[cb.id + '_obs'] = obsInput.value;
+        }
+    });
     p.vistoria.obs = document.getElementById('vistoriaObs').value;
     p.vistoria.fotoRealizada = document.getElementById('vistoriaFoto').checked;
-    salvarBanco();
+    p.secoesDinamicas = [];
+    document.querySelectorAll('#containerAspectosLivres > div').forEach(el => {
+        p.secoesDinamicas.push({ tit: el.querySelector('.l-tit') ? el.querySelector('.l-tit').value : '', obs: el.querySelector('.l-obs') ? el.querySelector('.l-obs').value : '' });
+    });
+    salvarBanco(); atualizarDashboard();
 }
 
 function mudarAba(abaId) {
@@ -1006,16 +1078,9 @@ function adicionarAspectoLivre(tit = '', obs = '') {
     document.getElementById('containerAspectosLivres').appendChild(div);
 }
 
-// ========== CAPTURA DE FOTO COM MARCA D'ÁGUA EM UTM (CÂMERA E GALERIA MULTIPLA) ==========
-function tirarFotoComMarcaDagua(idPonto, modulo) {
-    fotoContexto = { idPonto, modulo };
-    document.getElementById('cameraInput').click();
-}
-
-function selecionarFotosGaleria(idPonto, modulo) {
-    fotoContexto = { idPonto, modulo };
-    document.getElementById('galeriaInput').click();
-}
+// ========== FOTOS ==========
+function tirarFotoComMarcaDagua(idPonto, modulo) { fotoContexto = { idPonto, modulo }; document.getElementById('cameraInput').click(); }
+function selecionarFotosGaleria(idPonto, modulo) { fotoContexto = { idPonto, modulo }; document.getElementById('galeriaInput').click(); }
 
 function aplicarMarcaDaguaEBaixar(imgSrc, callback) {
     const p = obterProjetoAtivo(); const pNome = p ? p.nome : 'Bezerra Coleta';
@@ -1023,28 +1088,16 @@ function aplicarMarcaDaguaEBaixar(imgSrc, callback) {
     img.onload = function() {
         const canvas = document.createElement('canvas');
         canvas.width = img.width; canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-
+        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
         const bannerH = Math.max(100, canvas.height * 0.12);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-        ctx.fillRect(0, canvas.height - bannerH, canvas.width, bannerH);
-
-        ctx.fillStyle = '#FFFFFF';
-        const fontSize = Math.max(16, Math.round(bannerH * 0.22));
-        ctx.font = `bold ${fontSize}px Inter, sans-serif`;
-
-        const strGpsVal = p ? (p.gps || '') : '';
-        const strUtmText = formatarCoordenadasUTM(strGpsVal);
-
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)'; ctx.fillRect(0, canvas.height - bannerH, canvas.width, bannerH);
+        ctx.fillStyle = '#FFFFFF'; const fontSize = Math.max(16, Math.round(bannerH * 0.22)); ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+        const strGpsVal = p ? (p.gps || '') : ''; const strUtmText = formatarCoordenadasUTM(strGpsVal);
         ctx.fillText(`BEZERRA CONSULTORIA AMBIENTAL | PROJETO: ${pNome.toUpperCase()}`, 30, canvas.height - bannerH + (fontSize * 1.2));
         ctx.fillText(`PONTO: ${fotoContexto.idPonto} (${fotoContexto.modulo}) | ${strUtmText}`, 30, canvas.height - bannerH + (fontSize * 2.5));
         ctx.fillText(`DATA/HORA: ${new Date().toLocaleString('pt-BR')}`, 30, canvas.height - bannerH + (fontSize * 3.8));
-
-        const a = document.createElement('a');
-        a.href = canvas.toDataURL('image/jpeg', 0.9);
-        a.download = `Foto_${fotoContexto.idPonto}_${Date.now()}.jpg`;
-        a.click();
+        const a = document.createElement('a'); a.href = canvas.toDataURL('image/jpeg', 0.9);
+        a.download = `Foto_${fotoContexto.idPonto}_${Date.now()}.jpg`; a.click();
         if (callback) callback();
     };
     img.src = imgSrc;
@@ -1060,31 +1113,19 @@ function processarFotoCapturada(e) {
 function processarFotosGaleria(e) {
     const files = e.target.files; if (!files || files.length === 0) return;
     let lista = Array.from(files);
-    if (lista.length > 30) {
-        showToast("Limite de 30 fotos por vez. Processando as primeiras 30 fotos...");
-        lista = lista.slice(0, 30);
-    } else {
-        showToast(`Processando ${lista.length} fotos em segundo plano...`);
-    }
-
+    if (lista.length > 30) { showToast("Limite de 30 fotos. Processando primeiras 30..."); lista = lista.slice(0, 30); }
+    else showToast(`Processando ${lista.length} fotos...`);
     let count = 0;
     lista.forEach((file, idx) => {
         const reader = new FileReader();
         reader.onload = function(ev) {
-            setTimeout(() => {
-                aplicarMarcaDaguaEBaixar(ev.target.result, () => {
-                    count++;
-                    if (count === lista.length) {
-                        showToast(`${count} fotos salvas na galeria com sucesso!`);
-                    }
-                });
-            }, idx * 200);
+            setTimeout(() => { aplicarMarcaDaguaEBaixar(ev.target.result, () => { count++; if (count === lista.length) showToast(`${count} fotos salvas!`); }); }, idx * 200);
         };
         reader.readAsDataURL(file);
     });
 }
 
-// ========== CAMADAS, PID E AMOSTRAS (COM PREVIEW VISUAL MUNSELL E PASSO DE PID) ==========
+// ========== CAMADAS, PID, AMOSTRAS ==========
 function atualizarPreviewMunsell(sel) {
     const preview = sel.nextElementSibling;
     const corNome = sel.value;
@@ -1117,9 +1158,7 @@ function adicionarLeituraPID(primeira = false, prof = '', val = '') {
 function gerarPassosPID(passo = 0.5) {
     const c = document.getElementById('containerPID'); c.innerHTML = '';
     const profTotal = parseFloat((document.getElementById('sondProfTotal').value || "5").replace(',', '.')) || 5.0;
-    for (let p = 0; p <= profTotal; p += passo) {
-        adicionarLeituraPID(p === 0, p.toFixed(1).replace('.', ','), '0.0');
-    }
+    for (let p = 0; p <= profTotal; p += passo) adicionarLeituraPID(p === 0, p.toFixed(1).replace('.', ','), '0.0');
 }
 
 function adicionarAmostraSolo(id = '', prof = '', sqi = '') {
@@ -1146,13 +1185,45 @@ function adicionarLeituraSlug(tempo = '', na = '') {
     document.getElementById('containerLeiturasSlug').appendChild(div);
 }
 
+// ========== SALVAR SONDAGEM (COM VALIDAÇÕES DE PROFUNDIDADE) ==========
 function salvarSondagem() {
     const id = document.getElementById('sondId').value; if (!id) { alert('ID obrigatório'); return; }
     const profTotal = parseFloat((document.getElementById('sondProfTotal').value || "0").replace(',', '.'));
     if (isNaN(profTotal) || profTotal <= 0) { alert('Informe uma profundidade total válida.'); return; }
-
     const p = obterProjetoAtivo(); if (!p) return;
     if (!p.sondagens) p.sondagens = [];
+
+    // Validação de profundidade das camadas
+    let erroProfundidade = false;
+    document.querySelectorAll('.camada').forEach(el => {
+        const ini = parseFloat((el.querySelector('.c-ini').value || '0').replace(',', '.'));
+        const fim = parseFloat((el.querySelector('.c-fim').value || '0').replace(',', '.'));
+        if (!isNaN(fim) && fim > profTotal) { alert(`Camada com fim em ${fim.toFixed(2)}m ultrapassa a profundidade total (${profTotal.toFixed(2)}m).`); erroProfundidade = true; }
+        if (!isNaN(ini) && ini > profTotal) { alert(`Camada com início em ${ini.toFixed(2)}m ultrapassa a profundidade total (${profTotal.toFixed(2)}m).`); erroProfundidade = true; }
+    });
+    if (erroProfundidade) return;
+
+    // Validação de profundidade do poço instalado
+    const pProf = parseFloat((document.getElementById('sondPocoProf').value || '0').replace(',', '.'));
+    const fFim = parseFloat((document.getElementById('sondPocoFiltroFim').value || '0').replace(',', '.'));
+    if (!isNaN(pProf) && pProf > profTotal) { alert(`Profundidade instalada do poço (${pProf.toFixed(2)}m) ultrapassa a profundidade total (${profTotal.toFixed(2)}m).`); return; }
+    if (!isNaN(fFim) && fFim > profTotal) { alert(`Fim da seção filtrante (${fFim.toFixed(2)}m) ultrapassa a profundidade total (${profTotal.toFixed(2)}m).`); return; }
+
+    // Validação de profundidade das amostras de solo
+    let erroAmostra = false;
+    document.querySelectorAll('.amostra-solo').forEach(el => {
+        const aProf = parseFloat((el.querySelector('.as-prof').value || '0').replace(',', '.'));
+        if (!isNaN(aProf) && aProf > profTotal) { alert(`Amostra de solo a ${aProf.toFixed(2)}m ultrapassa a profundidade total (${profTotal.toFixed(2)}m).`); erroAmostra = true; }
+    });
+    if (erroAmostra) return;
+
+    // Validação de profundidade das leituras PID
+    let erroPID = false;
+    document.querySelectorAll('.pid-item').forEach(el => {
+        const pProf = parseFloat((el.querySelector('.p-prof').value || '0').replace(',', '.'));
+        if (!isNaN(pProf) && pProf > profTotal) { alert(`Leitura PID a ${pProf.toFixed(2)}m ultrapassa a profundidade total (${profTotal.toFixed(2)}m).`); erroPID = true; }
+    });
+    if (erroPID) return;
 
     const camadas = [];
     document.querySelectorAll('.camada').forEach(el => {
@@ -1161,14 +1232,8 @@ function salvarSondagem() {
         camadas.push({ ini: el.querySelector('.c-ini').value, fim: el.querySelector('.c-fim').value, desc: el.querySelector('.c-desc').value, lit });
     });
 
-    const pids = [];
-    document.querySelectorAll('.pid-item').forEach(el => { pids.push({ prof: el.querySelector('.p-prof').value, val: el.querySelector('.p-val').value }); });
-
-    const amostrasSolo = [];
-    document.querySelectorAll('.amostra-solo').forEach(el => { amostrasSolo.push({ id: el.querySelector('.as-id').value, prof: el.querySelector('.as-prof').value, sqi: el.querySelector('.as-sqi').value }); });
-
-    const hFim = new Date().toLocaleTimeString('pt-BR');
-    const hIni = document.getElementById('sondHoraInicio').value || hFim;
+    const pids = []; document.querySelectorAll('.pid-item').forEach(el => { pids.push({ prof: el.querySelector('.p-prof').value, val: el.querySelector('.p-val').value }); });
+    const amostrasSolo = []; document.querySelectorAll('.amostra-solo').forEach(el => { amostrasSolo.push({ id: el.querySelector('.as-id').value, prof: el.querySelector('.as-prof').value, sqi: el.querySelector('.as-sqi').value }); });
 
     let nomePontoFinal = id;
     const pNome = document.getElementById('sondPocoNome').value;
@@ -1180,7 +1245,7 @@ function salvarSondagem() {
         naEstabilizado: document.getElementById('sondNAEstabilizado').value, metodo: document.getElementById('sondMetodo').value,
         descontaminado: document.getElementById('sondDescontaminado').checked, pidCalibrado: document.getElementById('sondPIDCalibrado').checked,
         obs: document.getElementById('sondObs').value, fotoRealizada: document.getElementById('sondFoto').checked,
-        horaIni: hIni, horaFim: hFim, camadas, pids, amostrasSolo,
+        camadas, pids, amostrasSolo,
         pocoInstalado: {
             nome: pNome, prof: document.getElementById('sondPocoProf').value,
             fIni: document.getElementById('sondPocoFiltroIni').value, fFim: document.getElementById('sondPocoFiltroFim').value,
@@ -1193,6 +1258,7 @@ function salvarSondagem() {
 
 function salvarPM() {
     const id = document.getElementById('pmId').value; if (!id) { alert('ID obrigatório'); return; }
+    if (document.getElementById('pmTemFaseLivre').checked && !document.getElementById('pmEspessuraFase').value.trim()) { alert('Preencha a espessura da fase livre.'); return; }
     const p = obterProjetoAtivo(); if (!p) return;
     if (!p.pms) p.pms = [];
     const amostrasAgua = []; document.querySelectorAll('.amostra-agua').forEach(el => amostrasAgua.push({ id: el.querySelector('.aa-id').value, param: el.querySelector('.aa-param').value }));
@@ -1201,43 +1267,68 @@ function salvarPM() {
         temFase: document.getElementById('pmTemFaseLivre').checked, fase: document.getElementById('pmEspessuraFase').value,
         revestPVC: document.getElementById('pmRevestimentoPVC').checked, revestInox: document.getElementById('pmRevestimentoInox').checked,
         selo: document.getElementById('pmSeloSanitario').checked, tampa: document.getElementById('pmTampa').checked,
-        obs: document.getElementById('pmObs').value, fotoRealizada: document.getElementById('pmFoto').checked,
-        amostrasAgua
+        obs: document.getElementById('pmObs').value, fotoRealizada: document.getElementById('pmFoto').checked, amostrasAgua
     };
     p.pms.push(dados); salvarBanco(); cancelarEdicao('PM'); atualizarDashboard(); showToast('Poço Salvo!');
 }
 
 function salvarVapores() {
-    const id = document.getElementById('vapId').value; if (!id) { alert('ID do Poço de Vapores obrigatório'); return; }
+    const id = document.getElementById('vapId').value; if (!id) { alert('ID obrigatório'); return; }
     const p = obterProjetoAtivo(); if (!p) return;
     if (!p.vapores) p.vapores = [];
     const amostrasVapor = []; document.querySelectorAll('.amostra-vapor').forEach(el => amostrasVapor.push({ id: el.querySelector('.av-id').value, metodo: el.querySelector('.av-metodo').value, param: el.querySelector('.av-param').value }));
     const dados = {
         id, tipo: document.getElementById('vapTipo').value, prof: document.getElementById('vapProf').value,
         pid: document.getElementById('vapPID').value, gps: document.getElementById('vapGPS').value,
-        obs: document.getElementById('vapObs').value, fotoRealizada: document.getElementById('vapFoto').checked,
-        amostrasVapor
+        obs: document.getElementById('vapObs').value, fotoRealizada: document.getElementById('vapFoto').checked, amostrasVapor
     };
     p.vapores.push(dados); salvarBanco(); document.getElementById('formVapores').reset(); document.getElementById('containerAmostrasVapor').innerHTML = ''; atualizarDashboard(); showToast('Poço de Vapores Salvo!');
 }
 
+// ========== SALVAR ARBÓREO ==========
+function calcularDAPAutomatico() {
+    const capVal = parseFloat((document.getElementById('arbCAP').value || '0').replace(',', '.'));
+    if (!isNaN(capVal) && capVal > 0) document.getElementById('arbDAP').value = (capVal / Math.PI).toFixed(2).replace('.', ',');
+    else document.getElementById('arbDAP').value = '';
+}
+
+function calcularDAPMult() {
+    const capsStr = document.getElementById('arbCAPsMult').value;
+    if (!capsStr.trim()) return;
+    const caps = capsStr.split(',').map(s => parseFloat(s.trim().replace(',', '.'))).filter(v => !isNaN(v) && v > 0);
+    if (caps.length === 0) return;
+    const somaQuadrados = caps.reduce((acc, val) => acc + Math.pow(val, 2), 0);
+    document.getElementById('arbDAP').value = Math.sqrt(somaQuadrados).toFixed(2).replace('.', ',');
+}
+
+function salvarArboreo() {
+    const id = document.getElementById('arbId').value; if (!id) { alert('ID do Exemplar obrigatório'); return; }
+    const p = obterProjetoAtivo(); if (!p) return;
+    if (!p.arboreo) p.arboreo = [];
+    const dados = {
+        id, nome: document.getElementById('arbNome').value, cientifico: document.getElementById('arbCientifico').value,
+        origem: document.getElementById('arbOrigem').value, cap: document.getElementById('arbCAP').value,
+        dap: document.getElementById('arbDAP').value, altura: document.getElementById('arbAltura').value,
+        copa: document.getElementById('arbCopa').value, estado: document.getElementById('arbEstado').value,
+        manejo: document.getElementById('arbManejo').value, gps: document.getElementById('arbGPS').value,
+        fotoRealizada: document.getElementById('arbFoto').checked, obs: document.getElementById('arbObs').value
+    };
+    p.arboreo.push(dados); salvarBanco(); document.getElementById('formArboreo').reset(); atualizarDashboard(); showToast('Exemplar Arbóreo Salvo!');
+}
+
+// ========== SLUG TEST ==========
 function calcularESalvarSlugTest() {
     const pocoId = document.getElementById('ensPocoId').value; if (!pocoId) { alert('Informe o Poço do Ensaio'); return; }
-    const naE = document.getElementById('ensNAEstab').value;
-    const naT = document.getElementById('ensNATeste').value;
-
-    const leituras = [];
-    document.querySelectorAll('.leitura-slug').forEach(el => leituras.push({ tempo: el.querySelector('.s-tempo').value, na: el.querySelector('.s-na').value }));
-
+    const leituras = []; document.querySelectorAll('.leitura-slug').forEach(el => leituras.push({ tempo: el.querySelector('.s-tempo').value, na: el.querySelector('.s-na').value }));
     const p = obterProjetoAtivo(); if (!p) return;
     if (!p.ensaios) p.ensaios = [];
     const dados = {
-        pocoId, tipo: document.getElementById('ensTipo').value, naE, naT,
+        pocoId, tipo: document.getElementById('ensTipo').value,
+        naE: document.getElementById('ensNAEstab').value, naT: document.getElementById('ensNATeste').value,
         dPerf: document.getElementById('ensDiamPerf').value, dFiltro: document.getElementById('ensDiamFiltro').value,
-        L: document.getElementById('ensCompFiltro').value,
-        obs: document.getElementById('ensObs').value, leituras
+        L: document.getElementById('ensCompFiltro').value, obs: document.getElementById('ensObs').value, leituras
     };
-    p.ensaios.push(dados); salvarBanco(); atualizarDashboard(); showToast("Ensaio Slug Test Salvo com Sucesso!");
+    p.ensaios.push(dados); salvarBanco(); atualizarDashboard(); showToast("Ensaio Slug Test Salvo!");
 }
 
 function cancelarEdicao(tipo) {
@@ -1246,282 +1337,115 @@ function cancelarEdicao(tipo) {
     mudarAba('abaProjeto');
 }
 
-// ========== MOTOR CANVAS 4K E DESENHO DE POÇOS DE MONITORAMENTO INSTALADOS COM COLUNA D'ÁGUA ==========
+// ========== MOTOR CANVAS ==========
 function renderizarConjuntoPerfisCanvas(projeto, canvas, scale = 4) {
     const sondagens = projeto.sondagens || []; if (sondagens.length === 0) return;
     let maxProf = 5; sondagens.forEach(s => { const p = parseFloat((s.profTotal || "5").replace(',', '.')); if (p > maxProf) maxProf = p; });
-
     const numSond = sondagens.length;
     const baseW = Math.max(1000, 300 + (numSond * 260)); const baseH = 1400;
     canvas.width = baseW * scale; canvas.height = baseH * scale;
     const ctx = canvas.getContext('2d'); ctx.scale(scale, scale);
-
     ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, baseW, baseH);
     ctx.strokeStyle = '#1F2937'; ctx.lineWidth = 2; ctx.strokeRect(15, 15, baseW - 30, baseH - 30);
-
     const topY = 90; const botY = 1020; const drawH = botY - topY; const pxPerMeter = drawH / maxProf;
-
     ctx.strokeStyle = '#EEF2F6'; ctx.lineWidth = 1;
     for (let m = 0; m <= Math.ceil(maxProf); m++) {
-        const yGrid = topY + (m * pxPerMeter);
-        ctx.beginPath(); ctx.moveTo(30, yGrid); ctx.lineTo(baseW - 30, yGrid); ctx.stroke();
+        const yGrid = topY + (m * pxPerMeter); ctx.beginPath(); ctx.moveTo(30, yGrid); ctx.lineTo(baseW - 30, yGrid); ctx.stroke();
     }
-
     const xRegua = 65; ctx.strokeStyle = '#374151'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(xRegua, topY); ctx.lineTo(xRegua, botY); ctx.stroke();
     for (let m = 0; m <= Math.ceil(maxProf); m++) {
-        const yM = topY + (m * pxPerMeter);
-        ctx.beginPath(); ctx.moveTo(xRegua - 6, yM); ctx.lineTo(xRegua, yM); ctx.stroke();
+        const yM = topY + (m * pxPerMeter); ctx.beginPath(); ctx.moveTo(xRegua - 6, yM); ctx.lineTo(xRegua, yM); ctx.stroke();
         ctx.fillStyle = '#111827'; ctx.font = 'bold 10px Inter, sans-serif'; ctx.fillText(`${m}m`, xRegua - 30, yM + 3);
     }
-
     let xOffset = 160; const colW = 60; const legendItemsMap = new Map();
-
     sondagens.forEach((s, idx) => {
         const pTotal = parseFloat((s.profTotal || "5").replace(',', '.')) || 5.0;
         ctx.fillStyle = '#111827'; ctx.font = 'bold 12px Inter, sans-serif'; ctx.fillText(s.id || `ST-${idx+1}`, xOffset, topY - 20);
-
         if (s.camadas) {
             s.camadas.forEach(c => {
-                const cIni = parseFloat((c.ini || "0").replace(',', '.'));
-                const cFim = parseFloat((c.fim || pTotal.toString()).replace(',', '.'));
+                const cIni = parseFloat((c.ini || "0").replace(',', '.')); const cFim = parseFloat((c.fim || pTotal.toString()).replace(',', '.'));
                 if (isNaN(cIni) || isNaN(cFim)) return;
                 const y1 = topY + (cIni * pxPerMeter); const y2 = topY + (cFim * pxPerMeter); const hB = y2 - y1;
-
                 let descLeg = (c.desc || '').trim();
                 if (!descLeg) {
                     const partes = [];
-                    if (c.lit?.argila) partes.push("Argila");
-                    if (c.lit?.silte) partes.push("Silte");
-                    if (c.lit?.areia) partes.push("Areia");
-                    if (c.lit?.seixos) partes.push("Seixos");
-                    if (c.lit?.aterro) partes.push("Aterro");
-                    if (c.lit?.pedra) partes.push("Pedra");
-                    if (c.lit?.entulho) partes.push("Entulho");
-                    if (c.lit?.rocha) partes.push("Frag. Rocha");
+                    if (c.lit?.argila) partes.push("Argila"); if (c.lit?.silte) partes.push("Silte"); if (c.lit?.areia) partes.push("Areia");
+                    if (c.lit?.seixos) partes.push("Seixos"); if (c.lit?.aterro) partes.push("Aterro"); if (c.lit?.pedra) partes.push("Pedra");
+                    if (c.lit?.entulho) partes.push("Entulho"); if (c.lit?.rocha) partes.push("Frag. Rocha");
                     descLeg = partes.join(" ") || "Solo Indefinido";
                 }
                 const corNome = c.lit?.cor || 'Marrom';
                 legendItemsMap.set(`${descLeg} (${corNome})`, { desc: descLeg, cor: corNome, lit: c.lit });
-
                 const rgb = MAPA_MUNSELL_RGB[corNome] || "180,180,180";
                 ctx.fillStyle = `rgb(${rgb})`; ctx.fillRect(xOffset, y1, colW, hB);
                 ctx.strokeStyle = '#1F2937'; ctx.lineWidth = 1; ctx.strokeRect(xOffset, y1, colW, hB);
-
-                ctx.save();
-                ctx.beginPath(); ctx.rect(xOffset, y1, colW, hB); ctx.clip();
-
-                if (c.lit?.argila) {
-                    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-                    for (let lx = xOffset - hB; lx < xOffset + colW; lx += 8) {
-                        ctx.beginPath(); ctx.moveTo(lx, y1); ctx.lineTo(lx + hB, y2); ctx.stroke();
-                    }
-                }
-                if (c.lit?.areia) {
-                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                    for (let px = xOffset + 4; px < xOffset + colW; px += 6) {
-                        for (let py = y1 + 4; py < y2; py += 6) {
-                            ctx.beginPath(); ctx.arc(px, py, 0.8, 0, Math.PI * 2); ctx.fill();
-                        }
-                    }
-                }
-                if (c.lit?.silte) {
-                    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                    for (let px = xOffset + 3; px < xOffset + colW; px += 4) {
-                        for (let py = y1 + 3; py < y2; py += 4) {
-                            ctx.fillRect(px, py, 0.8, 0.8);
-                        }
-                    }
-                }
-                if (c.lit?.seixos || c.lit?.pedra) {
-                    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
-                    for (let px = xOffset + 10; px < xOffset + colW - 5; px += 14) {
-                        for (let py = y1 + 10; py < y2 - 5; py += 14) {
-                            ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI * 2); ctx.stroke();
-                        }
-                    }
-                }
+                ctx.save(); ctx.beginPath(); ctx.rect(xOffset, y1, colW, hB); ctx.clip();
+                if (c.lit?.argila) { ctx.strokeStyle = 'rgba(0,0,0,0.25)'; for (let lx = xOffset - hB; lx < xOffset + colW; lx += 8) { ctx.beginPath(); ctx.moveTo(lx, y1); ctx.lineTo(lx + hB, y2); ctx.stroke(); } }
+                if (c.lit?.areia) { ctx.fillStyle = 'rgba(0,0,0,0.3)'; for (let px = xOffset + 4; px < xOffset + colW; px += 6) { for (let py = y1 + 4; py < y2; py += 6) { ctx.beginPath(); ctx.arc(px, py, 0.8, 0, Math.PI * 2); ctx.fill(); } } }
+                if (c.lit?.silte) { ctx.fillStyle = 'rgba(0,0,0,0.2)'; for (let px = xOffset + 3; px < xOffset + colW; px += 4) { for (let py = y1 + 3; py < y2; py += 4) { ctx.fillRect(px, py, 0.8, 0.8); } } }
                 ctx.restore();
             });
         }
-
-        // DESENHO DO POÇO DE MONITORAMENTO COM POÇO BRANCO E COLUNA D'ÁGUA AZUL
         if (s.pocoInstalado && s.pocoInstalado.nome) {
             const pProf = parseFloat((s.pocoInstalado.prof || pTotal.toString()).replace(',', '.'));
             const fIni = parseFloat((s.pocoInstalado.fIni || "0").replace(',', '.'));
             const fFim = parseFloat((s.pocoInstalado.fFim || pProf.toString()).replace(',', '.'));
-
             const xPoco = xOffset + 20; const wPoco = 20;
             const yTopPoco = topY; const yBotPoco = topY + (pProf * pxPerMeter);
             const yFiltroIni = topY + (fIni * pxPerMeter); const yFiltroFim = topY + (fFim * pxPerMeter);
-
-            // Tubo Cego (Poço Branco com contorno)
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(xPoco, yTopPoco, wPoco, yFiltroIni - yTopPoco);
+            ctx.fillStyle = '#FFFFFF'; ctx.fillRect(xPoco, yTopPoco, wPoco, yFiltroIni - yTopPoco);
             ctx.strokeStyle = '#1E3A8A'; ctx.lineWidth = 1.5; ctx.strokeRect(xPoco, yTopPoco, wPoco, yFiltroIni - yTopPoco);
-
-            // Seção Filtrante Ranhurada (Tubo Filtro Ranhurado)
-            ctx.fillStyle = 'rgba(240, 249, 255, 0.95)';
-            ctx.fillRect(xPoco, yFiltroIni, wPoco, yFiltroFim - yFiltroIni);
+            ctx.fillStyle = 'rgba(240, 249, 255, 0.95)'; ctx.fillRect(xPoco, yFiltroIni, wPoco, yFiltroFim - yFiltroIni);
             ctx.strokeStyle = '#2563EB'; ctx.strokeRect(xPoco, yFiltroIni, wPoco, yFiltroFim - yFiltroIni);
-
-            // Ranhuras do Filtro
             ctx.strokeStyle = '#1E3A8A'; ctx.lineWidth = 1;
-            for (let yR = yFiltroIni + 4; yR < yFiltroFim; yR += 6) {
-                ctx.beginPath(); ctx.moveTo(xPoco + 3, yR); ctx.lineTo(xPoco + wPoco - 3, yR); ctx.stroke();
-            }
-
-            // COLUNA D'ÁGUA AZUL DENTRO DO POÇO
+            for (let yR = yFiltroIni + 4; yR < yFiltroFim; yR += 6) { ctx.beginPath(); ctx.moveTo(xPoco + 3, yR); ctx.lineTo(xPoco + wPoco - 3, yR); ctx.stroke(); }
             const naValStr = s.naEstabilizado || s.naPerfuracao;
             if (naValStr) {
                 const naM = parseFloat(naValStr.replace(',', '.'));
                 if (!isNaN(naM) && naM <= pProf) {
                     const yAguaTop = topY + (naM * pxPerMeter);
-                    ctx.fillStyle = 'rgba(115, 174, 228, 0.65)';
-                    ctx.fillRect(xPoco + 1, yAguaTop, wPoco - 2, yBotPoco - yAguaTop);
+                    ctx.fillStyle = 'rgba(115, 174, 228, 0.65)'; ctx.fillRect(xPoco + 1, yAguaTop, wPoco - 2, yBotPoco - yAguaTop);
                 }
             }
-
-            // Acabamento Superficial / Tampa
             ctx.fillStyle = '#374151'; ctx.fillRect(xPoco - 6, topY - 6, wPoco + 12, 6);
             ctx.fillStyle = '#111827'; ctx.font = 'bold 8px Inter, sans-serif'; ctx.fillText(s.pocoInstalado.nome, xPoco - 4, topY - 10);
         }
-
-        if (s.naPerfuracao) {
-            const naP = parseFloat(s.naPerfuracao.replace(',', '.'));
-            if (!isNaN(naP) && naP <= maxProf) {
-                const yNAp = topY + (naP * pxPerMeter);
-                ctx.strokeStyle = '#2563EB'; ctx.beginPath(); ctx.moveTo(xOffset - 10, yNAp); ctx.lineTo(xOffset + colW + 10, yNAp); ctx.stroke();
-                ctx.fillStyle = '#2563EB'; ctx.font = '8px Inter, sans-serif'; ctx.fillText('▽ NA Perf.', xOffset - 40, yNAp - 2);
-            }
-        }
-
-        if (s.naEstabilizado) {
-            const naE = parseFloat(s.naEstabilizado.replace(',', '.'));
-            if (!isNaN(naE) && naE <= maxProf) {
-                const yNAe = topY + (naE * pxPerMeter);
-                ctx.strokeStyle = '#1E3A8A'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(xOffset - 15, yNAe); ctx.lineTo(xOffset + colW + 15, yNAe); ctx.stroke();
-                ctx.fillStyle = '#1E3A8A'; ctx.font = 'bold 8px Inter, sans-serif'; ctx.fillText('▼ NA Estab.', xOffset + colW + 18, yNAe - 2);
-            }
-        }
-
-        if (s.amostrasSolo) {
-            s.amostrasSolo.forEach(a => {
-                const aM = parseFloat((a.prof || "0").replace(',', '.'));
-                if (!isNaN(aM) && aM <= maxProf) {
-                    const yA = topY + (aM * pxPerMeter);
-                    ctx.fillStyle = '#DC2626'; ctx.fillRect(xOffset + colW + 2, yA - 6, 38, 12);
-                    ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 8px Inter, sans-serif'; ctx.fillText(a.id || 'AS', xOffset + colW + 5, yA + 3);
-                }
-            });
-        }
-
-        // Leituras de VOC (PID) - Aumentada a distância da coluna da sondagem/poço
-        if (s.pids) {
-            s.pids.forEach(pi => {
-                const pM = parseFloat((pi.prof || "0").replace(',', '.'));
-                const valNum = parseFloat((pi.val || "0").replace(',', '.'));
-                if (!isNaN(pM) && pM <= maxProf) {
-                    const yPID = topY + (pM * pxPerMeter);
-                    if (!isNaN(valNum) && valNum > 0) {
-                        ctx.fillStyle = obterCorGradienteVOC(pi.val);
-                        ctx.fillRect(xOffset - 95, yPID - 12, 72, 20);
-                        ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 11px Inter, sans-serif';
-                        ctx.fillText(`VOC: ${pi.val} PPM`, xOffset - 91, yPID + 3);
-                    } else {
-                        ctx.fillStyle = '#4B5563'; ctx.font = 'bold 10px Inter, sans-serif';
-                        ctx.fillText(`VOC: 0 PPM`, xOffset - 91, yPID + 3);
-                    }
-                }
-            });
-        }
-
         xOffset += 250;
     });
-
     const legY = 1040;
     ctx.strokeStyle = '#374151'; ctx.lineWidth = 1; ctx.strokeRect(30, legY, baseW - 60, 110);
     ctx.fillStyle = '#111827'; ctx.font = 'bold 11px Inter, sans-serif'; ctx.fillText('LEGENDA LITOLÓGICA E CONSTRUTIVA', 40, legY + 18);
-
     let legX = 40; let legRowY = legY + 35; let itemsInRow = 0;
     legendItemsMap.forEach((item, key) => {
         const rgb = MAPA_MUNSELL_RGB[item.cor] || "180,180,180";
-        ctx.fillStyle = `rgb(${rgb})`; ctx.fillRect(legX, legRowY, 18, 12);
-        ctx.strokeStyle = '#1F2937'; ctx.strokeRect(legX, legRowY, 18, 12);
-
-        ctx.fillStyle = '#111827'; ctx.font = '10px Inter, sans-serif';
-        ctx.fillText(item.desc.substring(0, 32), legX + 24, legRowY + 9);
-
+        ctx.fillStyle = `rgb(${rgb})`; ctx.fillRect(legX, legRowY, 18, 12); ctx.strokeStyle = '#1F2937'; ctx.strokeRect(legX, legRowY, 18, 12);
+        ctx.fillStyle = '#111827'; ctx.font = '10px Inter, sans-serif'; ctx.fillText(item.desc.substring(0, 32), legX + 24, legRowY + 9);
         itemsInRow++; legX += 230;
         if (itemsInRow === 4) { itemsInRow = 0; legX = 40; legRowY += 22; }
     });
-
-    ctx.fillStyle = '#2563EB'; ctx.fillText('▽ NA Perfuração', baseW - 240, legY + 20);
-    ctx.fillStyle = '#1E3A8A'; ctx.font = 'bold 10px Inter, sans-serif'; ctx.fillText('▼ NA Estabilizado', baseW - 130, legY + 20);
-
-    // CARIMBO OFICIAL DENTRO DO DESENHO (EXATAMENTE COMO NA IMAGEM VICENTINI)
-    const carY = 1165; const carH = 110;
-    ctx.strokeStyle = '#111827'; ctx.lineWidth = 1.5; ctx.strokeRect(30, carY, baseW - 60, carH);
-
-    ctx.beginPath();
-    ctx.moveTo(220, carY); ctx.lineTo(220, carY + carH);
-    ctx.moveTo(620, carY); ctx.lineTo(620, carY + carH);
-    ctx.moveTo(30, carY + 35); ctx.lineTo(baseW - 30, carY + 35);
-    ctx.moveTo(30, carY + 55); ctx.lineTo(baseW - 30, carY + 55);
-    ctx.moveTo(30, carY + 75); ctx.lineTo(baseW - 30, carY + 75);
-    ctx.moveTo(30, carY + 92); ctx.lineTo(baseW - 30, carY + 92);
-    ctx.stroke();
-
-    ctx.fillStyle = '#3BAE52'; ctx.font = 'bold 16px Inter, sans-serif'; ctx.fillText('BEZERRA AMBIENTAL', 45, carY + 25);
-
-    ctx.fillStyle = '#111827'; ctx.font = 'bold 9px Inter, sans-serif'; ctx.fillText('Escala: 1:50', 35, carY + 48);
-    ctx.fillRect(100, carY + 42, 40, 6); ctx.strokeRect(140, carY + 42, 40, 6);
-    ctx.fillText('0', 98, carY + 53); ctx.fillText('0.6', 135, carY + 53); ctx.fillText('1.2m', 178, carY + 53);
-    ctx.fillText('Folha: A4', 560, carY + 48);
-
-    ctx.font = 'bold 9px Inter, sans-serif'; ctx.fillStyle = '#111827';
-    ctx.fillText(`Projeto: ${projeto.nome || 'Avaliação Preliminar e Investigação Confirmatória'} (${projeto.numero || '-'})`, 35, carY + 68);
-    ctx.fillText(`Cliente: ${projeto.razaoSocial || projeto.nome || 'Viação Vicentini Ltda.'}`, 35, carY + 86);
-    ctx.fillText(`Endereço: ${projeto.endereco || projeto.gps || 'São Paulo - SP'}`, 35, carY + 103);
-
-    ctx.fillText('Resp. Técnico: Bruno Bezerra (CREA/SP 5070672819)', 630, carY + 86);
-    ctx.font = 'bold 10px Inter, sans-serif'; ctx.fillStyle = '#111827';
-    ctx.fillText('FIGURA - Perfil Litológico das Sondagens/Poços', 630, carY + 103);
 }
 
-// ========== EXPORTAÇÃO PDF ORGANIZADO COM PRETO PURO (#000000) E IMPRESSÃO DE 100% DOS DADOS ==========
+// ========== EXPORTAÇÕES ==========
 function gerarPDF() {
     try {
         salvarCapaProjeto(); const p = obterProjetoAtivo();
         if (!p) { alert("Nenhum projeto ativo selecionado."); return; }
-        
         const jsPDFClass = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
-        if (!jsPDFClass) {
-            gerarRelatorioHTMLImpressao(p);
-            return;
-        }
+        if (!jsPDFClass) { gerarRelatorioHTMLImpressao(p); return; }
         const doc = new jsPDFClass(); let y = 15;
 
         const executarAutoTable = (docInst, config) => {
-            if (typeof docInst.autoTable === 'function') {
-                docInst.autoTable(config);
-            } else if (window.jspdf && typeof window.jspdf.autoTable === 'function') {
-                window.jspdf.autoTable(docInst, config);
-            } else if (typeof autoTable === 'function') {
-                autoTable(docInst, config);
-            }
+            if (typeof docInst.autoTable === 'function') docInst.autoTable(config);
+            else if (window.jspdf && typeof window.jspdf.autoTable === 'function') window.jspdf.autoTable(docInst, config);
+            else if (typeof autoTable === 'function') autoTable(docInst, config);
         };
 
         function desenharCabecalhoLogo(d) {
-            try {
-                const logoData = getBase64LogoFallback();
-                if (logoData && logoData.startsWith('data:image')) { d.addImage(logoData, 'PNG', 14, 8, 16, 16); }
-            } catch(e) {}
+            try { const logoData = getBase64LogoFallback(); if (logoData && logoData.startsWith('data:image')) d.addImage(logoData, 'PNG', 14, 8, 16, 16); } catch(e) {}
             d.setFont("helvetica", "bold"); d.setFontSize(10); d.setTextColor(59, 174, 82);
-            d.text("BEZERRA CONSULTORIA AMBIENTAL", 34, 15);
-            d.setFont("helvetica", "normal"); d.setFontSize(8); d.setTextColor(134, 188, 148);
-            d.text("Engenharia & Gerenciamento de Áreas Contaminadas", 34, 20);
-            d.setDrawColor(59, 174, 82); d.line(14, 25, 196, 25);
+            d.text("BEZERRA CONSULTORIA AMBIENTAL", 34, 15); d.setFont("helvetica", "normal"); d.setFontSize(8); d.setTextColor(134, 188, 148);
+            d.text("Engenharia & Gerenciamento de Áreas Contaminadas", 34, 20); d.setDrawColor(59, 174, 82); d.line(14, 25, 196, 25);
         }
 
         function desenharRodapeDireitos(d) {
@@ -1529,7 +1453,6 @@ function gerarPDF() {
             d.text("Todos os direitos reservados a Bezerra Ambiental (CNPJ: 29.165.656/0001-46) e Bruno Bezerra", 105, 290, { align: "center" });
         }
 
-        // PÁGINA 1: IDENTIFICAÇÃO DO PROJETO
         desenharCabecalhoLogo(doc); desenharRodapeDireitos(doc); y = 35;
         doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.setTextColor(0, 0, 0);
         doc.text("RELATÓRIO TÉCNICO DE CAMPO", 105, y, { align: "center" }); y += 12;
@@ -1539,7 +1462,6 @@ function gerarPDF() {
         if (p.clima) { doc.text(`Condições Climáticas: ${p.clima}`, 14, y); y += 6; }
         doc.line(14, y, 196, y); y += 10;
 
-        // PÁGINA MCE (SE PREENCHIDO)
         if (p.mce && (p.mce.cnae_principal || p.mce.area_total || p.mce.origem_agua)) {
             doc.addPage(); desenharCabecalhoLogo(doc); desenharRodapeDireitos(doc); y = 35;
             doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
@@ -1551,7 +1473,6 @@ function gerarPDF() {
             if (p.mce.obs) { doc.text(`Observações MCE: ${p.mce.obs}`, 14, y); y += 6; }
         }
 
-        // PÁGINA VISTORIA (SE PREENCHIDO)
         if (p.vistoria && p.vistoria.obs) {
             doc.addPage(); desenharCabecalhoLogo(doc); desenharRodapeDireitos(doc); y = 35;
             doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
@@ -1560,7 +1481,6 @@ function gerarPDF() {
             doc.text(`Observações / Conclusão: ${p.vistoria.obs}`, 14, y); y += 6;
         }
 
-        // PÁGINA ARBÓREO (SE HOUVER EXEMPLARES)
         if (p.arboreo && p.arboreo.length > 0) {
             doc.addPage(); desenharCabecalhoLogo(doc); desenharRodapeDireitos(doc); y = 35;
             doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
@@ -1569,7 +1489,6 @@ function gerarPDF() {
             executarAutoTable(doc, { startY: y, head: [['ID', 'Espécie', 'CAP (cm)', 'DAP (cm)', 'Estado', 'Manejo']], body: arbRows });
         }
 
-        // PÁGINA SONDAGENS / RESUMO & AMOSTRAS DE SOLO
         if (p.sondagens && p.sondagens.length > 0) {
             doc.addPage(); desenharCabecalhoLogo(doc); desenharRodapeDireitos(doc); y = 35;
             doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
@@ -1579,14 +1498,11 @@ function gerarPDF() {
                 doc.text(`${s.id} | Prof. Total: ${s.profTotal}m | GPS: ${s.gps || p.gps}`, 14, y); y += 5;
                 doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(0, 0, 0);
                 if (s.camadas) s.camadas.forEach(c => { doc.text(` • Camada ${c.ini}-${c.fim}m: ${c.desc} (${c.lit?.cor || 'Munsell'})`, 14, y); y += 4; });
-                if (s.amostrasSolo && s.amostrasSolo.length > 0) {
-                    s.amostrasSolo.forEach(a => { doc.text(`   [Amostra Solo] ${a.id} (${a.prof}m) - SQIs: ${a.sqi}`, 14, y); y += 4; });
-                }
+                if (s.amostrasSolo && s.amostrasSolo.length > 0) { s.amostrasSolo.forEach(a => { doc.text(`   [Amostra Solo] ${a.id} (${a.prof}m) - SQIs: ${a.sqi}`, 14, y); y += 4; }); }
                 y += 4;
             });
         }
 
-        // PÁGINA POÇOS D'ÁGUA & AMOSTRAS DE ÁGUA SUBTERRÂNEA
         if (p.pms && p.pms.length > 0) {
             doc.addPage(); desenharCabecalhoLogo(doc); desenharRodapeDireitos(doc); y = 35;
             doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
@@ -1595,14 +1511,11 @@ function gerarPDF() {
                 doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(0, 0, 0);
                 doc.text(`Poço: ${pm.id} | Prof: ${pm.prof}m | NA: ${pm.na}m | Fase Livre: ${pm.temFase ? pm.fase + 'cm' : 'Não'}`, 14, y); y += 5;
                 doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(0, 0, 0);
-                if (pm.amostrasAgua && pm.amostrasAgua.length > 0) {
-                    pm.amostrasAgua.forEach(a => { doc.text(`   [Amostra Água] ${a.id} - Parâmetros: ${a.param}`, 14, y); y += 4; });
-                }
+                if (pm.amostrasAgua && pm.amostrasAgua.length > 0) { pm.amostrasAgua.forEach(a => { doc.text(`   [Amostra Água] ${a.id} - Parâmetros: ${a.param}`, 14, y); y += 4; }); }
                 y += 4;
             });
         }
 
-        // PÁGINA POÇOS DE VAPOR / AR & AMOSTRAS DE VAPOR
         if (p.vapores && p.vapores.length > 0) {
             doc.addPage(); desenharCabecalhoLogo(doc); desenharRodapeDireitos(doc); y = 35;
             doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
@@ -1611,14 +1524,11 @@ function gerarPDF() {
                 doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(0, 0, 0);
                 doc.text(`Ponto: ${v.id} | Tipo: ${v.tipo} | Prof: ${v.prof}m | PID: ${v.pid} PPM`, 14, y); y += 5;
                 doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(0, 0, 0);
-                if (v.amostrasVapor && v.amostrasVapor.length > 0) {
-                    v.amostrasVapor.forEach(a => { doc.text(`   [Amostra Vapor] ${a.id} (Método: ${a.metodo}) - Parâmetros: ${a.param}`, 14, y); y += 4; });
-                }
+                if (v.amostrasVapor && v.amostrasVapor.length > 0) { v.amostrasVapor.forEach(a => { doc.text(`   [Amostra Vapor] ${a.id} (Método: ${a.metodo}) - Parâmetros: ${a.param}`, 14, y); y += 4; }); }
                 y += 4;
             });
         }
 
-        // PÁGINA SLUG TEST (SE HOUVER ENSAIOS)
         if (p.ensaios && p.ensaios.length > 0) {
             doc.addPage(); desenharCabecalhoLogo(doc); desenharRodapeDireitos(doc); y = 35;
             doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
@@ -1626,22 +1536,15 @@ function gerarPDF() {
             p.ensaios.forEach(ens => {
                 doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(0, 0, 0);
                 doc.text(`Poço: ${ens.pocoId} | Tipo: ${ens.tipo} | NA Estab: ${ens.naE}m | NA Inicial: ${ens.naT}m`, 14, y); y += 6;
-                if (ens.leituras && ens.leituras.length > 0) {
-                    let slugRows = ens.leituras.map(l => [l.tempo || '-', l.na || '-']);
-                    executarAutoTable(doc, { startY: y, head: [['Tempo', "Nível d'Água (m)"]], body: slugRows });
-                    y = doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : y + 30;
-                }
+                if (ens.leituras && ens.leituras.length > 0) { let slugRows = ens.leituras.map(l => [l.tempo || '-', l.na || '-']); executarAutoTable(doc, { startY: y, head: [['Tempo', "Nível d'Água (m)"]], body: slugRows }); y = doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : y + 30; }
             });
         }
 
-        // PÁGINAS DE PERFIS LITOLÓGICOS (DINÂMICO: ATÉ 6 SE <=6m, OU ATÉ 3 SE ATÉ 15m)
         if (p.sondagens && p.sondagens.length > 0) {
             let maxP = 0; p.sondagens.forEach(s => { const val = parseFloat((s.profTotal||"0").replace(',','.')); if (val > maxP) maxP = val; });
             const tamanhoLote = (maxP <= 6.0) ? 6 : 3;
-
             for (let i = 0; i < p.sondagens.length; i += tamanhoLote) {
-                doc.addPage();
-                desenharCabecalhoLogo(doc); desenharRodapeDireitos(doc);
+                doc.addPage(); desenharCabecalhoLogo(doc); desenharRodapeDireitos(doc);
                 const sondLote = p.sondagens.slice(i, i + tamanhoLote);
                 const canvasLote = document.createElement('canvas');
                 const projLote = { ...p, sondagens: sondLote };
@@ -1651,205 +1554,74 @@ function gerarPDF() {
         }
 
         doc.save(`Relatorio_${p.nome.replace(/\s+/g, '')}.pdf`); showToast("PDF Gerado com Sucesso!");
-    } catch(err) {
-        console.error(err);
-        gerarRelatorioHTMLImpressao(p);
-    }
+    } catch(err) { console.error(err); gerarRelatorioHTMLImpressao(p); }
 }
 
 function exportarExcel() {
     try {
         salvarCapaProjeto(); const p = obterProjetoAtivo();
         if (!p) { alert("Nenhum projeto ativo selecionado."); return; }
-        
         if (typeof XLSX !== 'undefined') {
             const wb = XLSX.utils.book_new();
-
-            // 1. Capa
-            let capaData = [
-                ["Projeto", p.nome], ["Número", p.numero], ["Data", p.data], ["Técnico", p.tecnico], ["GPS", p.gps],
-                ["Rodapé", "Todos os direitos reservados a Bezerra Ambiental (CNPJ: 29.165.656/0001-46) e Bruno Bezerra"]
-            ];
+            let capaData = [["Projeto", p.nome], ["Número", p.numero], ["Data", p.data], ["Técnico", p.tecnico], ["GPS", p.gps], ["Rodapé", "Todos os direitos reservados a Bezerra Ambiental (CNPJ: 29.165.656/0001-46) e Bruno Bezerra"]];
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(capaData), "Capa_Projeto");
-
-            // 2. MCE
-            let mceData = [
-                ["CNAE Principal", p.mce?.cnae_principal || '-'],
-                ["Área Total (m²)", p.mce?.area_total || '-'],
-                ["Origem Água", p.mce?.origem_agua || '-'],
-                ["Observações MCE", p.mce?.obs || '-']
-            ];
+            let mceData = [["CNAE Principal", p.mce?.cnae_principal || '-'], ["Área Total (m²)", p.mce?.area_total || '-'], ["Origem Água", p.mce?.origem_agua || '-'], ["Observações MCE", p.mce?.obs || '-']];
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mceData), "MCE");
-
-            // 3. Vistoria
             let vistData = [["Conclusão / Observações Vistoria", p.vistoria?.obs || '-']];
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(vistData), "Vistoria_Ambiental");
-
-            // 4. Levantamento Arbóreo
-            let arbData = [];
-            if (p.arboreo) p.arboreo.forEach(a => arbData.push({ ID: a.id, Espécie: a.nome, "Nome Científico": a.cientifico, Origem: a.origem, "CAP (cm)": a.cap, "DAP (cm)": a.dap, "Altura (m)": a.altura, Estado: a.estado, Manejo: a.manejo, GPS: a.gps }));
+            let arbData = []; if (p.arboreo) p.arboreo.forEach(a => arbData.push({ ID: a.id, Espécie: a.nome, CAP: a.cap, DAP: a.dap, Estado: a.estado, Manejo: a.manejo, GPS: a.gps }));
             if (arbData.length === 0) arbData.push({ Aviso: "Sem exemplares" });
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(arbData), "Levantamento_Arboreo");
-
-            // 5. Sondagens ST
-            let sondData = [];
-            if (p.sondagens) p.sondagens.forEach(s => {
-                let camadasStr = (s.camadas||[]).map(c => `${c.ini}-${c.fim}m: ${c.desc} (${c.lit?.cor||'Munsell'})`).join("\r\n");
-                let pidsStr = (s.pids||[]).map(pi => `${pi.prof}m: ${pi.val} PPM`).join("\r\n");
-                let amSoloStr = (s.amostrasSolo||[]).map(a => `${a.id} (${a.prof}m) - SQI: ${a.sqi}`).join("\r\n");
-                sondData.push({ ID: s.id, "Prof. Total": s.profTotal, "GPS": s.gps || p.gps, "NA Perf.": s.naPerfuracao, "NA Estab.": s.naEstabilizado, Camadas: camadasStr, "PID (VOC)": pidsStr, "Amostras Solo": amSoloStr, "Poço Instalado": s.pocoInstalado?.nome || '-' });
-            });
+            let sondData = []; if (p.sondagens) p.sondagens.forEach(s => { let camadasStr = (s.camadas||[]).map(c => `${c.ini}-${c.fim}m: ${c.desc} (${c.lit?.cor||'Munsell'})`).join("\r\n"); let pidsStr = (s.pids||[]).map(pi => `${pi.prof}m: ${pi.val} PPM`).join("\r\n"); let amSoloStr = (s.amostrasSolo||[]).map(a => `${a.id} (${a.prof}m) - SQI: ${a.sqi}`).join("\r\n"); sondData.push({ ID: s.id, "Prof. Total": s.profTotal, GPS: s.gps || p.gps, Camadas: camadasStr, "PID (VOC)": pidsStr, "Amostras Solo": amSoloStr, "Poço Instalado": s.pocoInstalado?.nome || '-' }); });
             if (sondData.length === 0) sondData.push({ Aviso: "Sem sondagens" });
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sondData), "Sondagens_ST");
-
-            // 6. Poços d'Água PM
-            let pmData = [];
-            if (p.pms) p.pms.forEach(pm => {
-                let amAguaStr = (pm.amostrasAgua||[]).map(a => `${a.id} - ${a.param}`).join("\r\n");
-                pmData.push({ ID: pm.id, "Profundidade (m)": pm.prof, "Nível d'Água (m)": pm.na, "Fase Livre": pm.temFase ? `${pm.fase} cm` : 'Não', "Amostras Água": amAguaStr, GPS: pm.gps });
-            });
-            if (pmData.length === 0) pmData.push({ Aviso: "Sem poços d'água" });
+            let pmData = []; if (p.pms) p.pms.forEach(pm => { let amAguaStr = (pm.amostrasAgua||[]).map(a => `${a.id} - ${a.param}`).join("\r\n"); pmData.push({ ID: pm.id, Prof: pm.prof, NA: pm.na, "Fase Livre": pm.temFase ? `${pm.fase} cm` : 'Não', "Amostras Água": amAguaStr, GPS: pm.gps }); });
+            if (pmData.length === 0) pmData.push({ Aviso: "Sem poços" });
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pmData), "Pocos_Agua_PM");
-
-            // 7. Poços de Vapor PV
-            let vapData = [];
-            if (p.vapores) p.vapores.forEach(v => {
-                let amVaporStr = (v.amostrasVapor||[]).map(a => `${a.id} (${a.metodo}) - ${a.param}`).join("\r\n");
-                vapData.push({ ID: v.id, Tipo: v.tipo, "Profundidade (m)": v.prof, "PID (PPM)": v.pid, "Amostras Vapor": amVaporStr, GPS: v.gps });
-            });
+            let vapData = []; if (p.vapores) p.vapores.forEach(v => { let amVaporStr = (v.amostrasVapor||[]).map(a => `${a.id} (${a.metodo}) - ${a.param}`).join("\r\n"); vapData.push({ ID: v.id, Tipo: v.tipo, Prof: v.prof, PID: v.pid, "Amostras Vapor": amVaporStr, GPS: v.gps }); });
             if (vapData.length === 0) vapData.push({ Aviso: "Sem poços de vapor" });
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(vapData), "Pocos_Vapores_PV");
-
-            // 8. Slug Test (Com Tabela Inteira de Leituras de Tempo)
-            let slugData = [];
-            if (p.ensaios) p.ensaios.forEach(e => {
-                let leiturasStr = (e.leituras||[]).map(l => `${l.tempo}: ${l.na}m`).join("\r\n");
-                slugData.push({ Poço: e.pocoId, Tipo: e.tipo, "NA Estab.": e.naE, "NA Inicial": e.naT, "Tabela Leituras Tempo": leiturasStr, Observações: e.obs });
-            });
+            let slugData = []; if (p.ensaios) p.ensaios.forEach(e => { let leiturasStr = (e.leituras||[]).map(l => `${l.tempo}: ${l.na}m`).join("\r\n"); slugData.push({ Poço: e.pocoId, Tipo: e.tipo, "NA Estab.": e.naE, "NA Inicial": e.naT, "Tabela Leituras Tempo": leiturasStr, Observações: e.obs }); });
             if (slugData.length === 0) slugData.push({ Aviso: "Sem ensaios" });
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slugData), "Slug_Test");
-
             XLSX.writeFile(wb, `Planilha_${p.nome.replace(/\s+/g, '_')}.xlsx`); showToast("Excel Baixado com Sucesso!");
-        } else {
-            // FALLBACK EXCEL OFFLINE 100% FUNCIONAL
-            let htmlStr = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"/></head><body>`;
-            htmlStr += `<h2>BEZERRA CONSULTORIA AMBIENTAL - RELATÓRIO DE CAMPO</h2>`;
-            htmlStr += `<table border="1"><tr><th>Projeto</th><td>${p.nome}</td><th>Número</th><td>${p.numero||"-"}</td><th>Data</th><td>${p.data}</td></tr>`;
-            htmlStr += `<tr><th>Técnico</th><td>${p.tecnico}</td><th>GPS</th><td colspan="3">${p.gps}</td></tr></table><br/>`;
-            
-            if (p.sondagens && p.sondagens.length > 0) {
-                htmlStr += `<h3>SONDAGENS (ST)</h3><table border="1"><tr><th>ID</th><th>Prof. Total</th><th>GPS</th><th>NA Perf</th><th>NA Estab</th><th>Camadas</th><th>PID</th></tr>`;
-                p.sondagens.forEach(s => {
-                    let cam = (s.camadas||[]).map(c=>`${c.ini}-${c.fim}m: ${c.desc}`).join("; ");
-                    let pids = (s.pids||[]).map(pi=>`${pi.prof}m: ${pi.val}ppm`).join("; ");
-                    htmlStr += `<tr><td>${s.id}</td><td>${s.profTotal}m</td><td>${s.gps||p.gps}</td><td>${s.naPerfuracao||"-"}</td><td>${s.naEstabilizado||"-"}</td><td>${cam}</td><td>${pids}</td></tr>`;
-                });
-                htmlStr += `</table><br/>`;
-            }
-
-            if (p.pms && p.pms.length > 0) {
-                htmlStr += `<h3>POÇOS DE ÁGUA (PM)</h3><table border="1"><tr><th>ID</th><th>Profundidade</th><th>NA</th><th>Fase Livre</th><th>Amostras Água</th></tr>`;
-                p.pms.forEach(pm => {
-                    let ams = (pm.amostrasAgua||[]).map(a=>`${a.id}: ${a.param}`).join("; ");
-                    htmlStr += `<tr><td>${pm.id}</td><td>${pm.prof}m</td><td>${pm.na}m</td><td>${pm.temFase?pm.fase+"cm":"Não"}</td><td>${ams}</td></tr>`;
-                });
-                htmlStr += `</table><br/>`;
-            }
-
-            if (p.vapores && p.vapores.length > 0) {
-                htmlStr += `<h3>POÇOS DE VAPOR / AR (PV)</h3><table border="1"><tr><th>ID</th><th>Tipo</th><th>Profundidade</th><th>PID</th><th>Amostras Vapor</th></tr>`;
-                p.vapores.forEach(v => {
-                    let ams = (v.amostrasVapor||[]).map(a=>`${a.id}: ${a.param}`).join("; ");
-                    htmlStr += `<tr><td>${v.id}</td><td>${v.tipo}</td><td>${v.prof}m</td><td>${v.pid}ppm</td><td>${ams}</td></tr>`;
-                });
-                htmlStr += `</table><br/>`;
-            }
-
-            htmlStr += `</body></html>`;
-            const blob = new Blob([htmlStr], { type: "application/vnd.ms-excel;charset=utf-8" });
-            const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-            a.download = `Planilha_${p.nome.replace(/\s+/g, "_")}.xls`; a.click();
-            showToast("Excel (.xls) Baixado com Sucesso!");
         }
-    } catch(err) {
-        console.error(err);
-        alert("Erro ao exportar Excel: " + err.message);
-    }
+    } catch(err) { console.error(err); alert("Erro ao exportar Excel: " + err.message); }
 }
 
 function exportarKML() {
     try {
-        const p = obterProjetoAtivo();
-        if (!p) { alert("Nenhum projeto ativo selecionado."); return; }
+        const p = obterProjetoAtivo(); if (!p) { alert("Nenhum projeto ativo selecionado."); return; }
         let kml = `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n<name>${p.nome}</name>\n`;
-
-        const extrairCoords = (str) => {
-            if (!str) return null;
-            const pts = str.split(',').map(s => parseFloat(s.trim()));
-            if (pts.length >= 2 && !isNaN(pts[0]) && !isNaN(pts[1])) return `${pts[1]},${pts[0]},0`;
-            return null;
-        };
-
-        if (p.sondagens) p.sondagens.forEach(s => {
-            const c = extrairCoords(s.gps || p.gps);
-            if (c) kml += `<Placemark><name>${s.id}</name><description>Sondagem / Poço</description><Point><coordinates>${c}</coordinates></Point></Placemark>\n`;
-        });
-
-        if (p.pms) p.pms.forEach(pm => {
-            const c = extrairCoords(pm.gps || p.gps);
-            if (c) kml += `<Placemark><name>${pm.id}</name><description>Poço d'Água</description><Point><coordinates>${c}</coordinates></Point></Placemark>\n`;
-        });
-
-        if (p.vapores) p.vapores.forEach(v => {
-            const c = extrairCoords(v.gps || p.gps);
-            if (c) kml += `<Placemark><name>${v.id}</name><description>Poço de Vapor</description><Point><coordinates>${c}</coordinates></Point></Placemark>\n`;
-        });
-
+        const extrairCoords = (str) => { if (!str) return null; const pts = str.split(',').map(s => parseFloat(s.trim())); if (pts.length >= 2 && !isNaN(pts[0]) && !isNaN(pts[1])) return `${pts[1]},${pts[0]},0`; return null; };
+        if (p.sondagens) p.sondagens.forEach(s => { const c = extrairCoords(s.gps || p.gps); if (c) kml += `<Placemark><name>${s.id}</name><Point><coordinates>${c}</coordinates></Point></Placemark>\n`; });
+        if (p.pms) p.pms.forEach(pm => { const c = extrairCoords(pm.gps || p.gps); if (c) kml += `<Placemark><name>${pm.id}</name><Point><coordinates>${c}</coordinates></Point></Placemark>\n`; });
+        if (p.vapores) p.vapores.forEach(v => { const c = extrairCoords(v.gps || p.gps); if (c) kml += `<Placemark><name>${v.id}</name><Point><coordinates>${c}</coordinates></Point></Placemark>\n`; });
         kml += `</Document>\n</kml>`;
-        const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+        const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
         a.download = `Mapa_${p.nome.replace(/\s+/g, '_')}.kml`; a.click(); showToast("KML para Google Earth Baixado!");
-    } catch(err) {
-        console.error(err);
-        alert("Erro ao exportar KML: " + err.message);
-    }
+    } catch(err) { console.error(err); alert("Erro ao exportar KML: " + err.message); }
 }
 
 function gerarCadeiaCustodiaPDF() {
     try {
-        const p = obterProjetoAtivo();
-        if (!p) { alert("Nenhum projeto ativo selecionado."); return; }
+        const p = obterProjetoAtivo(); if (!p) { alert("Nenhum projeto ativo selecionado."); return; }
         const jsPDFClass = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
-        if (!jsPDFClass) {
-            gerarRelatorioHTMLImpressao(p);
-            return;
-        }
+        if (!jsPDFClass) { gerarRelatorioHTMLImpressao(p); return; }
         const doc = new jsPDFClass();
-        doc.setFont("helvetica", "bold"); doc.setFontSize(14);
-        doc.text("FICHA DE CADEIA DE CUSTÓDIA (COC) - AMOSTRAMENTO", 14, 15);
+        doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text("FICHA DE CADEIA DE CUSTÓDIA (COC) - AMOSTRAMENTO", 14, 15);
         doc.setFontSize(9); doc.setFont("helvetica", "normal");
-        doc.text(`Contratante: Bezerra Consultoria Ambiental Ltda.`, 14, 25);
-        doc.text(`Projeto: ${p.nome}`, 14, 30); doc.text(`Técnico Coletor: ${p.tecnico}`, 14, 35);
+        doc.text(`Contratante: Bezerra Consultoria Ambiental Ltda.`, 14, 25); doc.text(`Projeto: ${p.nome}`, 14, 30); doc.text(`Técnico Coletor: ${p.tecnico}`, 14, 35);
         doc.line(14, 40, 196, 40);
-
         let rows = [];
-        if (p.sondagens) p.sondagens.forEach(s => {
-            if (s.amostrasSolo) s.amostrasSolo.forEach(a => rows.push([a.id, "Solo", `${a.prof}m`, p.data, a.sqi || "BTEX/VOC", s.obs || "Amostragem de Solo"]));
-        });
-        if (p.pms) p.pms.forEach(pm => {
-            if (pm.amostrasAgua) pm.amostrasAgua.forEach(a => rows.push([a.id, "Água Subterrânea", `${pm.na}m`, p.data, a.param || "VOC/VOC/Metais", pm.obs || "Amostragem Água"]));
-        });
-        if (p.vapores) p.vapores.forEach(v => {
-            if (v.amostrasVapor) v.amostrasVapor.forEach(a => rows.push([a.id, "Vapores / Ar", `${v.prof}m`, p.data, a.param || "VOCs/BTEX", v.obs || "Amostragem Vapor"]));
-        });
-
+        if (p.sondagens) p.sondagens.forEach(s => { if (s.amostrasSolo) s.amostrasSolo.forEach(a => rows.push([a.id, "Solo", `${a.prof}m`, p.data, a.sqi || "BTEX/VOC", s.obs || "Amostragem de Solo"])); });
+        if (p.pms) p.pms.forEach(pm => { if (pm.amostrasAgua) pm.amostrasAgua.forEach(a => rows.push([a.id, "Água Subterrânea", `${pm.na}m`, p.data, a.param || "VOC/Metais", pm.obs || "Amostragem Água"])); });
+        if (p.vapores) p.vapores.forEach(v => { if (v.amostrasVapor) v.amostrasVapor.forEach(a => rows.push([a.id, "Vapores / Ar", `${v.prof}m`, p.data, a.param || "VOCs/BTEX", v.obs || "Amostragem Vapor"])); });
         if (rows.length === 0) rows.push(["-", "Sem amostras", "-", "-", "-", "-"]);
-        if (typeof doc.autoTable === 'function') doc.autoTable({ startY: 45, head: [['ID Amostra', 'Matriz', 'Prof/NA', 'Data', 'Parâmetros Solicitados', 'Observações / Laboratório']], body: rows }); else if (window.jspdf && typeof window.jspdf.autoTable === 'function') window.jspdf.autoTable(doc, { startY: 45, head: [['ID Amostra', 'Matriz', 'Prof/NA', 'Data', 'Parâmetros Solicitados', 'Observações / Laboratório']], body: rows });
+        if (typeof doc.autoTable === 'function') doc.autoTable({ startY: 45, head: [['ID Amostra', 'Matriz', 'Prof/NA', 'Data', 'Parâmetros', 'Observações']], body: rows });
+        else if (window.jspdf && typeof window.jspdf.autoTable === 'function') window.jspdf.autoTable(doc, { startY: 45, head: [['ID Amostra', 'Matriz', 'Prof/NA', 'Data', 'Parâmetros', 'Observações']], body: rows });
         doc.save(`Cadeia_Custodia_${p.nome.replace(/\s+/g, '')}.pdf`); showToast("Cadeia de Custódia Gerada!");
-    } catch(err) {
-        console.error(err);
-        gerarRelatorioHTMLImpressao(p);
-    }
+    } catch(err) { console.error(err); gerarRelatorioHTMLImpressao(p); }
 }
 
 function gerarRelatorioHTMLImpressao(p) {
@@ -1857,38 +1629,18 @@ function gerarRelatorioHTMLImpressao(p) {
     let h = `<!DOCTYPE html><html><head><title>Relatório - ${p.nome}</title><style>body{font-family:Arial,sans-serif;padding:20px;color:#111;} table{width:100%;border-collapse:collapse;margin:10px 0;} th,td{border:1px solid #ccc;padding:6px;text-align:left;} h1,h2,h3{color:#3BAE52;} @media print{.no-print{display:none;}}</style></head><body>`;
     h += `<div class="no-print" style="margin-bottom:15px;"><button onclick="window.print()" style="background:#3BAE52;color:#fff;font-weight:bold;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;">Imprimir / Salvar PDF</button></div>`;
     h += `<h1>BEZERRA CONSULTORIA AMBIENTAL</h1><p><strong>Projeto:</strong> ${p.nome} (${p.numero||'-'}) | <strong>Data:</strong> ${p.data} | <strong>Técnico:</strong> ${p.tecnico}</p><hr/>`;
-    
     if (p.sondagens && p.sondagens.length > 0) {
-        h += `<h2>Sondagens e Perfil Litológico (ST)</h2><table><tr><th>ID</th><th>Prof Total</th><th>GPS</th><th>NA Perf</th><th>NA Estab</th><th>Camadas / Amostras</th></tr>`;
-        p.sondagens.forEach(s => {
-            let cam = (s.camadas||[]).map(c=>`${c.ini}-${c.fim}m: ${c.desc}`).join("<br/>");
-            let ams = (s.amostrasSolo||[]).map(a=>`[Solo] ${a.id} (${a.prof}m): ${a.sqi}`).join("<br/>");
-            h += `<tr><td><strong>${s.id}</strong></td><td>${s.profTotal}m</td><td>${s.gps||p.gps}</td><td>${s.naPerfuracao||"-"}</td><td>${s.naEstabilizado||"-"}</td><td>${cam}<br/>${ams}</td></tr>`;
-        });
+        h += `<h2>Sondagens e Perfil Litológico (ST)</h2><table><tr><th>ID</th><th>Prof Total</th><th>GPS</th><th>Camadas / Amostras</th></tr>`;
+        p.sondagens.forEach(s => { let cam = (s.camadas||[]).map(c=>`${c.ini}-${c.fim}m: ${c.desc}`).join("<br/>"); let ams = (s.amostrasSolo||[]).map(a=>`[Solo] ${a.id} (${a.prof}m): ${a.sqi}`).join("<br/>"); h += `<tr><td><strong>${s.id}</strong></td><td>${s.profTotal}m</td><td>${s.gps||p.gps}</td><td>${cam}<br/>${ams}</td></tr>`; });
         h += `</table>`;
     }
-
     if (p.pms && p.pms.length > 0) {
         h += `<h2>Poços de Monitoramento d'Água (PM)</h2><table><tr><th>ID</th><th>Profundidade</th><th>NA</th><th>Fase Livre</th><th>Amostras Água</th></tr>`;
-        p.pms.forEach(pm => {
-            let ams = (pm.amostrasAgua||[]).map(a=>`${a.id}: ${a.param}`).join("<br/>");
-            h += `<tr><td><strong>${pm.id}</strong></td><td>${pm.prof}m</td><td>${pm.na}m</td><td>${pm.temFase?pm.fase+"cm":"Não"}</td><td>${ams}</td></tr>`;
-        });
+        p.pms.forEach(pm => { let ams = (pm.amostrasAgua||[]).map(a=>`${a.id}: ${a.param}`).join("<br/>"); h += `<tr><td><strong>${pm.id}</strong></td><td>${pm.prof}m</td><td>${pm.na}m</td><td>${pm.temFase?pm.fase+"cm":"Não"}</td><td>${ams}</td></tr>`; });
         h += `</table>`;
     }
-
-    if (p.vapores && p.vapores.length > 0) {
-        h += `<h2>Poços de Vapor / Ar (PV)</h2><table><tr><th>ID</th><th>Tipo</th><th>Profundidade</th><th>PID</th><th>Amostras Vapor</th></tr>`;
-        p.vapores.forEach(v => {
-            let ams = (v.amostrasVapor||[]).map(a=>`${a.id}: ${a.param}`).join("<br/>");
-            h += `<tr><td><strong>${v.id}</strong></td><td>${v.tipo}</td><td>${v.prof}m</td><td>${v.pid}ppm</td><td>${ams}</td></tr>`;
-        });
-        h += `</table>`;
-    }
-
     h += `<hr/><p style="font-size:10px;color:#3BAE52;text-align:center;">Todos os direitos reservados a Bezerra Ambiental (CNPJ: 29.165.656/0001-46) e Bruno Bezerra</p></body></html>`;
-    w.document.write(h); w.document.close();
-    setTimeout(() => { w.print(); }, 500);
+    w.document.write(h); w.document.close(); setTimeout(() => { w.print(); }, 500);
 }
 
 function exportarWhatsApp() { const p = obterProjetoAtivo(); if (!p) return; window.open(`https://wa.me/?text=${encodeURIComponent(`*BEZERRA COLETA*\nProjeto: ${p.nome}\nData: ${p.data}`)}`, '_blank'); }
