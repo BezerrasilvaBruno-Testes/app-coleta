@@ -750,7 +750,7 @@ function converterLatLongParaUTM(lat, lon) {
     const A = (lon_rad - lon0_rad) * Math.cos(lat_rad);
 
     const M = a * ((1 - e2/4 - 3*e2*e2/64 - 5*e2*e2*e2/256) * lat_rad -
-             (3*e2/8 + 3*e2*e2/32 + 45*e2*e2*e2/1024) * Math.sin(2*lat_rad) +
+             (3*e2/8 + 3*e2*e2/32 + 45*e2*e2/1024) * Math.sin(2*lat_rad) +
              (15*e2*e2/256 + 45*e2*e2*e2/1024) * Math.sin(4*lat_rad) -
              (35*e2*e2*e2/3072) * Math.sin(6*lat_rad));
 
@@ -1059,16 +1059,26 @@ function processarFotoCapturada(e) {
 
 function processarFotosGaleria(e) {
     const files = e.target.files; if (!files || files.length === 0) return;
+    let lista = Array.from(files);
+    if (lista.length > 30) {
+        showToast("Limite de 30 fotos por vez. Processando as primeiras 30 fotos...");
+        lista = lista.slice(0, 30);
+    } else {
+        showToast(`Processando ${lista.length} fotos em segundo plano...`);
+    }
+
     let count = 0;
-    Array.from(files).forEach((file, idx) => {
+    lista.forEach((file, idx) => {
         const reader = new FileReader();
         reader.onload = function(ev) {
             setTimeout(() => {
                 aplicarMarcaDaguaEBaixar(ev.target.result, () => {
                     count++;
-                    if (count === files.length) showToast(`${count} Fotos da Galeria Carimbadas com Sucesso!`);
+                    if (count === lista.length) {
+                        showToast(`${count} fotos salvas na galeria com sucesso!`);
+                    }
                 });
-            }, idx * 300);
+            }, idx * 200);
         };
         reader.readAsDataURL(file);
     });
@@ -1487,16 +1497,25 @@ function gerarPDF() {
         
         const jsPDFClass = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
         if (!jsPDFClass) {
-            alert("Biblioteca PDF (jsPDF) não carregada. Verifique sua conexão com a internet ou use a impressão do navegador.");
-            window.print();
+            gerarRelatorioHTMLImpressao(p);
             return;
         }
         const doc = new jsPDFClass(); let y = 15;
 
+        const executarAutoTable = (docInst, config) => {
+            if (typeof docInst.autoTable === 'function') {
+                docInst.autoTable(config);
+            } else if (window.jspdf && typeof window.jspdf.autoTable === 'function') {
+                window.jspdf.autoTable(docInst, config);
+            } else if (typeof autoTable === 'function') {
+                autoTable(docInst, config);
+            }
+        };
+
         function desenharCabecalhoLogo(d) {
             try {
                 const logoData = getBase64LogoFallback();
-                if (logoData) { d.addImage(logoData, 'PNG', 14, 8, 16, 16); }
+                if (logoData && logoData.startsWith('data:image')) { d.addImage(logoData, 'PNG', 14, 8, 16, 16); }
             } catch(e) {}
             d.setFont("helvetica", "bold"); d.setFontSize(10); d.setTextColor(59, 174, 82);
             d.text("BEZERRA CONSULTORIA AMBIENTAL", 34, 15);
@@ -1547,7 +1566,7 @@ function gerarPDF() {
             doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
             doc.text("LEVANTAMENTO ARBÓREO (DENDROMETRIA)", 14, y); y += 8;
             let arbRows = p.arboreo.map(a => [a.id, a.nome || '-', a.cap || '-', a.dap || '-', a.estado || '-', a.manejo || '-']);
-            doc.autoTable({ startY: y, head: [['ID', 'Espécie', 'CAP (cm)', 'DAP (cm)', 'Estado', 'Manejo']], body: arbRows });
+            executarAutoTable(doc, { startY: y, head: [['ID', 'Espécie', 'CAP (cm)', 'DAP (cm)', 'Estado', 'Manejo']], body: arbRows });
         }
 
         // PÁGINA SONDAGENS / RESUMO & AMOSTRAS DE SOLO
@@ -1609,8 +1628,8 @@ function gerarPDF() {
                 doc.text(`Poço: ${ens.pocoId} | Tipo: ${ens.tipo} | NA Estab: ${ens.naE}m | NA Inicial: ${ens.naT}m`, 14, y); y += 6;
                 if (ens.leituras && ens.leituras.length > 0) {
                     let slugRows = ens.leituras.map(l => [l.tempo || '-', l.na || '-']);
-                    doc.autoTable({ startY: y, head: [['Tempo', "Nível d'Água (m)"]], body: slugRows });
-                    y = doc.lastAutoTable.finalY + 8;
+                    executarAutoTable(doc, { startY: y, head: [['Tempo', "Nível d'Água (m)"]], body: slugRows });
+                    y = doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : y + 30;
                 }
             });
         }
@@ -1634,8 +1653,7 @@ function gerarPDF() {
         doc.save(`Relatorio_${p.nome.replace(/\s+/g, '')}.pdf`); showToast("PDF Gerado com Sucesso!");
     } catch(err) {
         console.error(err);
-        alert("Erro ao gerar PDF: " + err.message + "\nTentando impressão nativa do navegador...");
-        window.print();
+        gerarRelatorioHTMLImpressao(p);
     }
 }
 
@@ -1643,77 +1661,116 @@ function exportarExcel() {
     try {
         salvarCapaProjeto(); const p = obterProjetoAtivo();
         if (!p) { alert("Nenhum projeto ativo selecionado."); return; }
-        if (typeof XLSX === 'undefined') {
-            alert("Biblioteca Excel (XLSX) não carregada. Verifique sua conexão com a internet.");
-            return;
+        
+        if (typeof XLSX !== 'undefined') {
+            const wb = XLSX.utils.book_new();
+
+            // 1. Capa
+            let capaData = [
+                ["Projeto", p.nome], ["Número", p.numero], ["Data", p.data], ["Técnico", p.tecnico], ["GPS", p.gps],
+                ["Rodapé", "Todos os direitos reservados a Bezerra Ambiental (CNPJ: 29.165.656/0001-46) e Bruno Bezerra"]
+            ];
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(capaData), "Capa_Projeto");
+
+            // 2. MCE
+            let mceData = [
+                ["CNAE Principal", p.mce?.cnae_principal || '-'],
+                ["Área Total (m²)", p.mce?.area_total || '-'],
+                ["Origem Água", p.mce?.origem_agua || '-'],
+                ["Observações MCE", p.mce?.obs || '-']
+            ];
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mceData), "MCE");
+
+            // 3. Vistoria
+            let vistData = [["Conclusão / Observações Vistoria", p.vistoria?.obs || '-']];
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(vistData), "Vistoria_Ambiental");
+
+            // 4. Levantamento Arbóreo
+            let arbData = [];
+            if (p.arboreo) p.arboreo.forEach(a => arbData.push({ ID: a.id, Espécie: a.nome, "Nome Científico": a.cientifico, Origem: a.origem, "CAP (cm)": a.cap, "DAP (cm)": a.dap, "Altura (m)": a.altura, Estado: a.estado, Manejo: a.manejo, GPS: a.gps }));
+            if (arbData.length === 0) arbData.push({ Aviso: "Sem exemplares" });
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(arbData), "Levantamento_Arboreo");
+
+            // 5. Sondagens ST
+            let sondData = [];
+            if (p.sondagens) p.sondagens.forEach(s => {
+                let camadasStr = (s.camadas||[]).map(c => `${c.ini}-${c.fim}m: ${c.desc} (${c.lit?.cor||'Munsell'})`).join("\r\n");
+                let pidsStr = (s.pids||[]).map(pi => `${pi.prof}m: ${pi.val} PPM`).join("\r\n");
+                let amSoloStr = (s.amostrasSolo||[]).map(a => `${a.id} (${a.prof}m) - SQI: ${a.sqi}`).join("\r\n");
+                sondData.push({ ID: s.id, "Prof. Total": s.profTotal, "GPS": s.gps || p.gps, "NA Perf.": s.naPerfuracao, "NA Estab.": s.naEstabilizado, Camadas: camadasStr, "PID (VOC)": pidsStr, "Amostras Solo": amSoloStr, "Poço Instalado": s.pocoInstalado?.nome || '-' });
+            });
+            if (sondData.length === 0) sondData.push({ Aviso: "Sem sondagens" });
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sondData), "Sondagens_ST");
+
+            // 6. Poços d'Água PM
+            let pmData = [];
+            if (p.pms) p.pms.forEach(pm => {
+                let amAguaStr = (pm.amostrasAgua||[]).map(a => `${a.id} - ${a.param}`).join("\r\n");
+                pmData.push({ ID: pm.id, "Profundidade (m)": pm.prof, "Nível d'Água (m)": pm.na, "Fase Livre": pm.temFase ? `${pm.fase} cm` : 'Não', "Amostras Água": amAguaStr, GPS: pm.gps });
+            });
+            if (pmData.length === 0) pmData.push({ Aviso: "Sem poços d'água" });
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pmData), "Pocos_Agua_PM");
+
+            // 7. Poços de Vapor PV
+            let vapData = [];
+            if (p.vapores) p.vapores.forEach(v => {
+                let amVaporStr = (v.amostrasVapor||[]).map(a => `${a.id} (${a.metodo}) - ${a.param}`).join("\r\n");
+                vapData.push({ ID: v.id, Tipo: v.tipo, "Profundidade (m)": v.prof, "PID (PPM)": v.pid, "Amostras Vapor": amVaporStr, GPS: v.gps });
+            });
+            if (vapData.length === 0) vapData.push({ Aviso: "Sem poços de vapor" });
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(vapData), "Pocos_Vapores_PV");
+
+            // 8. Slug Test (Com Tabela Inteira de Leituras de Tempo)
+            let slugData = [];
+            if (p.ensaios) p.ensaios.forEach(e => {
+                let leiturasStr = (e.leituras||[]).map(l => `${l.tempo}: ${l.na}m`).join("\r\n");
+                slugData.push({ Poço: e.pocoId, Tipo: e.tipo, "NA Estab.": e.naE, "NA Inicial": e.naT, "Tabela Leituras Tempo": leiturasStr, Observações: e.obs });
+            });
+            if (slugData.length === 0) slugData.push({ Aviso: "Sem ensaios" });
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slugData), "Slug_Test");
+
+            XLSX.writeFile(wb, `Planilha_${p.nome.replace(/\s+/g, '_')}.xlsx`); showToast("Excel Baixado com Sucesso!");
+        } else {
+            // FALLBACK EXCEL OFFLINE 100% FUNCIONAL
+            let htmlStr = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"/></head><body>`;
+            htmlStr += `<h2>BEZERRA CONSULTORIA AMBIENTAL - RELATÓRIO DE CAMPO</h2>`;
+            htmlStr += `<table border="1"><tr><th>Projeto</th><td>${p.nome}</td><th>Número</th><td>${p.numero||"-"}</td><th>Data</th><td>${p.data}</td></tr>`;
+            htmlStr += `<tr><th>Técnico</th><td>${p.tecnico}</td><th>GPS</th><td colspan="3">${p.gps}</td></tr></table><br/>`;
+            
+            if (p.sondagens && p.sondagens.length > 0) {
+                htmlStr += `<h3>SONDAGENS (ST)</h3><table border="1"><tr><th>ID</th><th>Prof. Total</th><th>GPS</th><th>NA Perf</th><th>NA Estab</th><th>Camadas</th><th>PID</th></tr>`;
+                p.sondagens.forEach(s => {
+                    let cam = (s.camadas||[]).map(c=>`${c.ini}-${c.fim}m: ${c.desc}`).join("; ");
+                    let pids = (s.pids||[]).map(pi=>`${pi.prof}m: ${pi.val}ppm`).join("; ");
+                    htmlStr += `<tr><td>${s.id}</td><td>${s.profTotal}m</td><td>${s.gps||p.gps}</td><td>${s.naPerfuracao||"-"}</td><td>${s.naEstabilizado||"-"}</td><td>${cam}</td><td>${pids}</td></tr>`;
+                });
+                htmlStr += `</table><br/>`;
+            }
+
+            if (p.pms && p.pms.length > 0) {
+                htmlStr += `<h3>POÇOS DE ÁGUA (PM)</h3><table border="1"><tr><th>ID</th><th>Profundidade</th><th>NA</th><th>Fase Livre</th><th>Amostras Água</th></tr>`;
+                p.pms.forEach(pm => {
+                    let ams = (pm.amostrasAgua||[]).map(a=>`${a.id}: ${a.param}`).join("; ");
+                    htmlStr += `<tr><td>${pm.id}</td><td>${pm.prof}m</td><td>${pm.na}m</td><td>${pm.temFase?pm.fase+"cm":"Não"}</td><td>${ams}</td></tr>`;
+                });
+                htmlStr += `</table><br/>`;
+            }
+
+            if (p.vapores && p.vapores.length > 0) {
+                htmlStr += `<h3>POÇOS DE VAPOR / AR (PV)</h3><table border="1"><tr><th>ID</th><th>Tipo</th><th>Profundidade</th><th>PID</th><th>Amostras Vapor</th></tr>`;
+                p.vapores.forEach(v => {
+                    let ams = (v.amostrasVapor||[]).map(a=>`${a.id}: ${a.param}`).join("; ");
+                    htmlStr += `<tr><td>${v.id}</td><td>${v.tipo}</td><td>${v.prof}m</td><td>${v.pid}ppm</td><td>${ams}</td></tr>`;
+                });
+                htmlStr += `</table><br/>`;
+            }
+
+            htmlStr += `</body></html>`;
+            const blob = new Blob([htmlStr], { type: "application/vnd.ms-excel;charset=utf-8" });
+            const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+            a.download = `Planilha_${p.nome.replace(/\s+/g, "_")}.xls`; a.click();
+            showToast("Excel (.xls) Baixado com Sucesso!");
         }
-        const wb = XLSX.utils.book_new();
-
-        // 1. Capa
-        let capaData = [
-            ["Projeto", p.nome], ["Número", p.numero], ["Data", p.data], ["Técnico", p.tecnico], ["GPS", p.gps],
-            ["Rodapé", "Todos os direitos reservados a Bezerra Ambiental (CNPJ: 29.165.656/0001-46) e Bruno Bezerra"]
-        ];
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(capaData), "Capa_Projeto");
-
-        // 2. MCE
-        let mceData = [
-            ["CNAE Principal", p.mce?.cnae_principal || '-'],
-            ["Área Total (m²)", p.mce?.area_total || '-'],
-            ["Origem Água", p.mce?.origem_agua || '-'],
-            ["Observações MCE", p.mce?.obs || '-']
-        ];
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mceData), "MCE");
-
-        // 3. Vistoria
-        let vistData = [["Conclusão / Observações Vistoria", p.vistoria?.obs || '-']];
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(vistData), "Vistoria_Ambiental");
-
-        // 4. Levantamento Arbóreo
-        let arbData = [];
-        if (p.arboreo) p.arboreo.forEach(a => arbData.push({ ID: a.id, Espécie: a.nome, "Nome Científico": a.cientifico, Origem: a.origem, "CAP (cm)": a.cap, "DAP (cm)": a.dap, "Altura (m)": a.altura, Estado: a.estado, Manejo: a.manejo, GPS: a.gps }));
-        if (arbData.length === 0) arbData.push({ Aviso: "Sem exemplares" });
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(arbData), "Levantamento_Arboreo");
-
-        // 5. Sondagens ST
-        let sondData = [];
-        if (p.sondagens) p.sondagens.forEach(s => {
-            let camadasStr = (s.camadas||[]).map(c => `${c.ini}-${c.fim}m: ${c.desc} (${c.lit?.cor||'Munsell'})`).join("\r\n");
-            let pidsStr = (s.pids||[]).map(pi => `${pi.prof}m: ${pi.val} PPM`).join("\r\n");
-            let amSoloStr = (s.amostrasSolo||[]).map(a => `${a.id} (${a.prof}m) - SQI: ${a.sqi}`).join("\r\n");
-            sondData.push({ ID: s.id, "Prof. Total": s.profTotal, "GPS": s.gps || p.gps, "NA Perf.": s.naPerfuracao, "NA Estab.": s.naEstabilizado, Camadas: camadasStr, "PID (VOC)": pidsStr, "Amostras Solo": amSoloStr, "Poço Instalado": s.pocoInstalado?.nome || '-' });
-        });
-        if (sondData.length === 0) sondData.push({ Aviso: "Sem sondagens" });
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sondData), "Sondagens_ST");
-
-        // 6. Poços d'Água PM
-        let pmData = [];
-        if (p.pms) p.pms.forEach(pm => {
-            let amAguaStr = (pm.amostrasAgua||[]).map(a => `${a.id} - ${a.param}`).join("\r\n");
-            pmData.push({ ID: pm.id, "Profundidade (m)": pm.prof, "Nível d'Água (m)": pm.na, "Fase Livre": pm.temFase ? `${pm.fase} cm` : 'Não', "Amostras Água": amAguaStr, GPS: pm.gps });
-        });
-        if (pmData.length === 0) pmData.push({ Aviso: "Sem poços d'água" });
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pmData), "Pocos_Agua_PM");
-
-        // 7. Poços de Vapor PV
-        let vapData = [];
-        if (p.vapores) p.vapores.forEach(v => {
-            let amVaporStr = (v.amostrasVapor||[]).map(a => `${a.id} (${a.metodo}) - ${a.param}`).join("\r\n");
-            vapData.push({ ID: v.id, Tipo: v.tipo, "Profundidade (m)": v.prof, "PID (PPM)": v.pid, "Amostras Vapor": amVaporStr, GPS: v.gps });
-        });
-        if (vapData.length === 0) vapData.push({ Aviso: "Sem poços de vapor" });
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(vapData), "Pocos_Vapores_PV");
-
-        // 8. Slug Test (Com Tabela Inteira de Leituras de Tempo)
-        let slugData = [];
-        if (p.ensaios) p.ensaios.forEach(e => {
-            let leiturasStr = (e.leituras||[]).map(l => `${l.tempo}: ${l.na}m`).join("\r\n");
-            slugData.push({ Poço: e.pocoId, Tipo: e.tipo, "NA Estab.": e.naE, "NA Inicial": e.naT, "Tabela Leituras Tempo": leiturasStr, Observações: e.obs });
-        });
-        if (slugData.length === 0) slugData.push({ Aviso: "Sem ensaios" });
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slugData), "Slug_Test");
-
-        XLSX.writeFile(wb, `Planilha_${p.nome.replace(/\s+/g, '_')}.xlsx`); showToast("Excel Baixado com Sucesso!");
     } catch(err) {
         console.error(err);
         alert("Erro ao exportar Excel: " + err.message);
@@ -1738,6 +1795,16 @@ function exportarKML() {
             if (c) kml += `<Placemark><name>${s.id}</name><description>Sondagem / Poço</description><Point><coordinates>${c}</coordinates></Point></Placemark>\n`;
         });
 
+        if (p.pms) p.pms.forEach(pm => {
+            const c = extrairCoords(pm.gps || p.gps);
+            if (c) kml += `<Placemark><name>${pm.id}</name><description>Poço d'Água</description><Point><coordinates>${c}</coordinates></Point></Placemark>\n`;
+        });
+
+        if (p.vapores) p.vapores.forEach(v => {
+            const c = extrairCoords(v.gps || p.gps);
+            if (c) kml += `<Placemark><name>${v.id}</name><description>Poço de Vapor</description><Point><coordinates>${c}</coordinates></Point></Placemark>\n`;
+        });
+
         kml += `</Document>\n</kml>`;
         const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
@@ -1754,7 +1821,7 @@ function gerarCadeiaCustodiaPDF() {
         if (!p) { alert("Nenhum projeto ativo selecionado."); return; }
         const jsPDFClass = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
         if (!jsPDFClass) {
-            alert("Biblioteca PDF não carregada. Verifique sua conexão à internet.");
+            gerarRelatorioHTMLImpressao(p);
             return;
         }
         const doc = new jsPDFClass();
@@ -1777,12 +1844,51 @@ function gerarCadeiaCustodiaPDF() {
         });
 
         if (rows.length === 0) rows.push(["-", "Sem amostras", "-", "-", "-", "-"]);
-        doc.autoTable({ startY: 45, head: [['ID Amostra', 'Matriz', 'Prof/NA', 'Data', 'Parâmetros Solicitados', 'Observações / Laboratório']], body: rows });
+        if (typeof doc.autoTable === 'function') doc.autoTable({ startY: 45, head: [['ID Amostra', 'Matriz', 'Prof/NA', 'Data', 'Parâmetros Solicitados', 'Observações / Laboratório']], body: rows }); else if (window.jspdf && typeof window.jspdf.autoTable === 'function') window.jspdf.autoTable(doc, { startY: 45, head: [['ID Amostra', 'Matriz', 'Prof/NA', 'Data', 'Parâmetros Solicitados', 'Observações / Laboratório']], body: rows });
         doc.save(`Cadeia_Custodia_${p.nome.replace(/\s+/g, '')}.pdf`); showToast("Cadeia de Custódia Gerada!");
     } catch(err) {
         console.error(err);
-        alert("Erro ao gerar Cadeia de Custódia: " + err.message);
+        gerarRelatorioHTMLImpressao(p);
     }
+}
+
+function gerarRelatorioHTMLImpressao(p) {
+    const w = window.open('', '_blank');
+    let h = `<!DOCTYPE html><html><head><title>Relatório - ${p.nome}</title><style>body{font-family:Arial,sans-serif;padding:20px;color:#111;} table{width:100%;border-collapse:collapse;margin:10px 0;} th,td{border:1px solid #ccc;padding:6px;text-align:left;} h1,h2,h3{color:#3BAE52;} @media print{.no-print{display:none;}}</style></head><body>`;
+    h += `<div class="no-print" style="margin-bottom:15px;"><button onclick="window.print()" style="background:#3BAE52;color:#fff;font-weight:bold;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;">Imprimir / Salvar PDF</button></div>`;
+    h += `<h1>BEZERRA CONSULTORIA AMBIENTAL</h1><p><strong>Projeto:</strong> ${p.nome} (${p.numero||'-'}) | <strong>Data:</strong> ${p.data} | <strong>Técnico:</strong> ${p.tecnico}</p><hr/>`;
+    
+    if (p.sondagens && p.sondagens.length > 0) {
+        h += `<h2>Sondagens e Perfil Litológico (ST)</h2><table><tr><th>ID</th><th>Prof Total</th><th>GPS</th><th>NA Perf</th><th>NA Estab</th><th>Camadas / Amostras</th></tr>`;
+        p.sondagens.forEach(s => {
+            let cam = (s.camadas||[]).map(c=>`${c.ini}-${c.fim}m: ${c.desc}`).join("<br/>");
+            let ams = (s.amostrasSolo||[]).map(a=>`[Solo] ${a.id} (${a.prof}m): ${a.sqi}`).join("<br/>");
+            h += `<tr><td><strong>${s.id}</strong></td><td>${s.profTotal}m</td><td>${s.gps||p.gps}</td><td>${s.naPerfuracao||"-"}</td><td>${s.naEstabilizado||"-"}</td><td>${cam}<br/>${ams}</td></tr>`;
+        });
+        h += `</table>`;
+    }
+
+    if (p.pms && p.pms.length > 0) {
+        h += `<h2>Poços de Monitoramento d'Água (PM)</h2><table><tr><th>ID</th><th>Profundidade</th><th>NA</th><th>Fase Livre</th><th>Amostras Água</th></tr>`;
+        p.pms.forEach(pm => {
+            let ams = (pm.amostrasAgua||[]).map(a=>`${a.id}: ${a.param}`).join("<br/>");
+            h += `<tr><td><strong>${pm.id}</strong></td><td>${pm.prof}m</td><td>${pm.na}m</td><td>${pm.temFase?pm.fase+"cm":"Não"}</td><td>${ams}</td></tr>`;
+        });
+        h += `</table>`;
+    }
+
+    if (p.vapores && p.vapores.length > 0) {
+        h += `<h2>Poços de Vapor / Ar (PV)</h2><table><tr><th>ID</th><th>Tipo</th><th>Profundidade</th><th>PID</th><th>Amostras Vapor</th></tr>`;
+        p.vapores.forEach(v => {
+            let ams = (v.amostrasVapor||[]).map(a=>`${a.id}: ${a.param}`).join("<br/>");
+            h += `<tr><td><strong>${v.id}</strong></td><td>${v.tipo}</td><td>${v.prof}m</td><td>${v.pid}ppm</td><td>${ams}</td></tr>`;
+        });
+        h += `</table>`;
+    }
+
+    h += `<hr/><p style="font-size:10px;color:#3BAE52;text-align:center;">Todos os direitos reservados a Bezerra Ambiental (CNPJ: 29.165.656/0001-46) e Bruno Bezerra</p></body></html>`;
+    w.document.write(h); w.document.close();
+    setTimeout(() => { w.print(); }, 500);
 }
 
 function exportarWhatsApp() { const p = obterProjetoAtivo(); if (!p) return; window.open(`https://wa.me/?text=${encodeURIComponent(`*BEZERRA COLETA*\nProjeto: ${p.nome}\nData: ${p.data}`)}`, '_blank'); }
