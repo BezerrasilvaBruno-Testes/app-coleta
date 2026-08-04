@@ -670,20 +670,27 @@
                     <button onclick="gerarPDF()" class="w-full bg-red-600 text-white font-bold py-4 rounded-lg shadow hover:bg-red-700 transition text-base">
                         Gerar Relatório PDF
                     </button>
-                    <button onclick="exportarExcel()" class="w-full bg-bezerra-verde text-white font-bold py-4 rounded-lg shadow hover:bg-green-700 transition">
+<!--                    
+<button onclick="exportarExcel()" class="w-full bg-bezerra-verde text-white font-bold py-4 rounded-lg shadow hover:bg-green-700 transition">
                         Baixar Excel
-                    </button>
+                    </button> 
+-->
                     <button onclick="exportarKML()" class="w-full bg-bezerra-azul text-white font-bold py-3 rounded-lg shadow hover:bg-blue-600 transition text-sm">
                         Baixar KML (Google Earth / QGIS)
                     </button>
                     <button onclick="gerarCadeiaCustodiaPDF()" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg shadow hover:bg-slate-900 transition text-sm">
                         Gerar Ficha de Cadeia de Custódia (COC)
                     </button>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button onclick="exportarEmail()" class="bg-blue-600 text-white font-bold py-3 rounded-lg shadow hover:bg-blue-700 text-sm">E-mail</button>
-                        <button onclick="exportarWhatsApp()" class="bg-[#25D366] text-white font-bold py-3 rounded-lg shadow hover:bg-green-600 text-sm">WhatsApp</button>
+<button onclick="exportarJSON()" class="w-full bg-gray-200 text-gray-800 border border-gray-300 font-bold py-4 rounded-lg shadow hover:bg-gray-300 transition">Backup JSON</button>                   
+ <div class="grid grid-cols-2 gap-3">
+<!--                       
+ <button onclick="exportarEmail()" class="bg-blue-600 text-white font-bold py-3 rounded-lg shadow hover:bg-blue-700 text-sm">E-mail</button>
+-->
+<!--                       
+ <button onclick="exportarWhatsApp()" class="bg-[#25D366] text-white font-bold py-3 rounded-lg shadow hover:bg-green-600 text-sm">WhatsApp</button>
                     </div>
-                    <button onclick="exportarJSON()" class="w-full bg-gray-200 text-gray-800 border border-gray-300 font-bold py-3 rounded-lg shadow hover:bg-gray-300 text-sm mt-2">Backup JSON</button>
+-->
+
                 </div>
             </div>
         </div>
@@ -691,7 +698,7 @@
 </main>
 
 <footer class="text-center text-[10px] text-gray-400 py-3 max-w-lg mx-auto w-full border-t border-gray-200">
-    Todos os direitos reservados a Bezerra Ambiental (CNPJ: 29.165.656/0001-46) e Bruno Bezerra
+    Todos os direitos reservados a Bezerra Ambiental (CNPJ: 29.165.656/0001-46) e Bruno Bezerra (contato@bezerraambiental.com.br)
 </footer>
 
 <div id="toast">Sucesso!</div>
@@ -1402,6 +1409,7 @@ function cancelarEdicao(tipo) {
 }
 
 // ========== MOTOR CANVAS 4K E DESENHO DE POÇOS DE MONITORAMENTO INSTALADOS COM COLUNA D'ÁGUA ==========
+
 function renderizarConjuntoPerfisCanvas(projeto, canvas, scale = 4) {
     const sondagens = projeto.sondagens || []; if (sondagens.length === 0) return;
     let maxProf = 5; sondagens.forEach(s => { const p = parseFloat((s.profTotal || "5").replace(',', '.')); if (p > maxProf) maxProf = p; });
@@ -1500,7 +1508,6 @@ function renderizarConjuntoPerfisCanvas(projeto, canvas, scale = 4) {
             });
         }
 
-        // DESENHO DO POÇO DE MONITORAMENTO COM POÇO BRANCO E COLUNA D'ÁGUA AZUL
         if (s.pocoInstalado && s.pocoInstalado.nome) {
             const pProf = parseFloat((s.pocoInstalado.prof || pTotal.toString()).replace(',', '.'));
             const fIni = parseFloat((s.pocoInstalado.fIni || "0").replace(',', '.'));
@@ -1510,23 +1517,19 @@ function renderizarConjuntoPerfisCanvas(projeto, canvas, scale = 4) {
             const yTopPoco = topY; const yBotPoco = topY + (pProf * pxPerMeter);
             const yFiltroIni = topY + (fIni * pxPerMeter); const yFiltroFim = topY + (fFim * pxPerMeter);
 
-            // Tubo Cego (Poço Branco com contorno)
             ctx.fillStyle = '#FFFFFF';
             ctx.fillRect(xPoco, yTopPoco, wPoco, yFiltroIni - yTopPoco);
             ctx.strokeStyle = '#1E3A8A'; ctx.lineWidth = 1.5; ctx.strokeRect(xPoco, yTopPoco, wPoco, yFiltroIni - yTopPoco);
 
-            // Seção Filtrante Ranhurada (Tubo Filtro Ranhurado)
             ctx.fillStyle = 'rgba(240, 249, 255, 0.95)';
             ctx.fillRect(xPoco, yFiltroIni, wPoco, yFiltroFim - yFiltroIni);
             ctx.strokeStyle = '#2563EB'; ctx.strokeRect(xPoco, yFiltroIni, wPoco, yFiltroFim - yFiltroIni);
 
-            // Ranhuras do Filtro
             ctx.strokeStyle = '#1E3A8A'; ctx.lineWidth = 1;
             for (let yR = yFiltroIni + 4; yR < yFiltroFim; yR += 6) {
                 ctx.beginPath(); ctx.moveTo(xPoco + 3, yR); ctx.lineTo(xPoco + wPoco - 3, yR); ctx.stroke();
             }
 
-            // COLUNA D'ÁGUA AZUL DENTRO DO POÇO
             const naValStr = s.naEstabilizado || s.naPerfuracao;
             if (naValStr) {
                 const naM = parseFloat(naValStr.replace(',', '.'));
@@ -1537,7 +1540,6 @@ function renderizarConjuntoPerfisCanvas(projeto, canvas, scale = 4) {
                 }
             }
 
-            // Acabamento Superficial / Tampa
             ctx.fillStyle = '#374151'; ctx.fillRect(xPoco - 6, topY - 6, wPoco + 12, 6);
             ctx.fillStyle = '#111827'; ctx.font = 'bold 8px Inter, sans-serif'; ctx.fillText(s.pocoInstalado.nome, xPoco - 4, topY - 10);
         }
@@ -1546,8 +1548,8 @@ function renderizarConjuntoPerfisCanvas(projeto, canvas, scale = 4) {
             const naP = parseFloat(s.naPerfuracao.replace(',', '.'));
             if (!isNaN(naP) && naP <= maxProf) {
                 const yNAp = topY + (naP * pxPerMeter);
-                ctx.strokeStyle = '#2563EB'; ctx.beginPath(); ctx.moveTo(xOffset - 10, yNAp); ctx.lineTo(xOffset + colW + 10, yNAp); ctx.stroke();
-                ctx.fillStyle = '#2563EB'; ctx.font = 'bold 10px Inter, sans-serif'; ctx.fillText('▽ NA Perf.', xOffset - 45, yNAp - 2);
+                ctx.strokeStyle = '#2563EB'; ctx.beginPath(); ctx.moveTo(xOffset - 10, yNAp); ctx.lineTo(xOffset + colW + 20, yNAp); ctx.stroke();
+                ctx.fillStyle = '#2563EB'; ctx.font = 'bold 10px Inter, sans-serif'; ctx.fillText('▽ NA Perf.', xOffset + colW + 24, yNAp - 2);
             }
         }
 
@@ -1571,7 +1573,6 @@ function renderizarConjuntoPerfisCanvas(projeto, canvas, scale = 4) {
             });
         }
 
-        // Leituras de VOC (PID) - Aumentada a distância da coluna da sondagem/poço
         if (s.pids) {
             s.pids.forEach(pi => {
                 const pM = parseFloat((pi.prof || "0").replace(',', '.'));
@@ -1601,54 +1602,108 @@ function renderizarConjuntoPerfisCanvas(projeto, canvas, scale = 4) {
     let legX = 40; let legRowY = legY + 35; let itemsInRow = 0;
     legendItemsMap.forEach((item, key) => {
         const rgb = MAPA_MUNSELL_RGB[item.cor] || "180,180,180";
-        ctx.fillStyle = `rgb(${rgb})`; ctx.fillRect(legX, legRowY, 18, 12);
-        ctx.strokeStyle = '#1F2937'; ctx.strokeRect(legX, legRowY, 18, 12);
+        ctx.fillStyle = `rgb(${rgb})`;
+        ctx.fillRect(legX, legRowY, 32, 20);
+        ctx.strokeStyle = '#1F2937';
+        ctx.strokeRect(legX, legRowY, 32, 20);
 
-        ctx.fillStyle = '#111827'; ctx.font = '10px Inter, sans-serif';
-        ctx.fillText(item.desc.substring(0, 32), legX + 24, legRowY + 9);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(legX, legRowY, 32, 20);
+        ctx.clip();
 
-        itemsInRow++; legX += 230;
-        if (itemsInRow === 4) { itemsInRow = 0; legX = 40; legRowY += 22; }
+        if (item.lit?.argila) {
+            ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+            for (let lx = legX - 20; lx < legX + 32; lx += 8) {
+                ctx.beginPath();
+                ctx.moveTo(lx, legRowY);
+                ctx.lineTo(lx + 20, legRowY + 20);
+                ctx.stroke();
+            }
+        }
+        if (item.lit?.areia) {
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            for (let px = legX + 4; px < legX + 32; px += 6) {
+                for (let py = legRowY + 4; py < legRowY + 20; py += 6) {
+                    ctx.beginPath();
+                    ctx.arc(px, py, 0.8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+        if (item.lit?.silte) {
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            for (let px = legX + 3; px < legX + 32; px += 4) {
+                for (let py = legRowY + 3; py < legRowY + 20; py += 4) {
+                    ctx.fillRect(px, py, 0.8, 0.8);
+                }
+            }
+        }
+        ctx.restore();
+
+        ctx.fillStyle = '#111827';
+        ctx.font = '10px Inter, sans-serif';
+        ctx.fillText(item.desc.substring(0, 32), legX + 36, legRowY + 14);
+
+        itemsInRow++; legX += 280;
+        if (itemsInRow === 4) { itemsInRow = 0; legX = 40; legRowY += 28; }
     });
 
-    // Legenda de NA dentro da caixa
-    legRowY += 22;
+    // Indicador de Amostra de Solo (tamanho alinhado)
+    ctx.fillStyle = '#DC2626';
+    ctx.fillRect(legX, legRowY, 32, 20);
+    ctx.strokeStyle = '#1F2937';
+    ctx.strokeRect(legX, legRowY, 32, 20);
+    ctx.fillStyle = '#111827';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillText('Amostra de Solo', legX + 36, legRowY + 14);
+    itemsInRow++; legX += 280;
+    if (itemsInRow === 4) { itemsInRow = 0; legX = 40; legRowY += 28; }
+
+
+    // Legenda de NA – lado a lado
+    legRowY += 30;
     ctx.fillStyle = '#2563EB';
     ctx.font = 'bold 10px Inter, sans-serif';
-    ctx.fillText('▽ NA Perfuração', 40, legRowY);
-    legRowY += 16;
+ctx.fillText('▽ NA Perfuração', 40, legRowY + 2);
     ctx.fillStyle = '#1E3A8A';
-    ctx.fillText('▼ NA Estabilizado', 40, legRowY);
+ctx.fillText('▼ NA Estabilizado', 220, legRowY + 2);  // ajuste o 220 se necessário
 
-    // CARIMBO OFICIAL DENTRO DO DESENHO (EXATAMENTE COMO NA IMAGEM VICENTINI)
-    const carY = 1165; const carH = 110;
-    ctx.strokeStyle = '#111827'; ctx.lineWidth = 1.5; ctx.strokeRect(30, carY, baseW - 60, carH);
+    const carY = 1165; const carH = 90;
+    ctx.strokeStyle = '#111827'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(30, carY, baseW - 60, carH);
 
     ctx.beginPath();
-    ctx.moveTo(220, carY); ctx.lineTo(220, carY + carH);
-    ctx.moveTo(620, carY); ctx.lineTo(620, carY + carH);
-    ctx.moveTo(30, carY + 35); ctx.lineTo(baseW - 30, carY + 35);
-    ctx.moveTo(30, carY + 55); ctx.lineTo(baseW - 30, carY + 55);
-    ctx.moveTo(30, carY + 75); ctx.lineTo(baseW - 30, carY + 75);
-    ctx.moveTo(30, carY + 92); ctx.lineTo(baseW - 30, carY + 92);
+    ctx.moveTo(baseW / 2, carY);
+    ctx.lineTo(baseW / 2, carY + carH);
     ctx.stroke();
 
-    ctx.fillStyle = '#3BAE52'; ctx.font = 'bold 16px Inter, sans-serif'; ctx.fillText('BEZERRA AMBIENTAL', 45, carY + 25);
+    ctx.beginPath();
+    ctx.moveTo(30, carY + 25); ctx.lineTo(baseW - 30, carY + 25);
+    ctx.moveTo(30, carY + 50); ctx.lineTo(baseW - 30, carY + 50);
+    ctx.stroke();
 
-    ctx.fillStyle = '#111827'; ctx.font = 'bold 9px Inter, sans-serif'; ctx.fillText('Escala: 1:50', 35, carY + 48);
-    ctx.fillRect(100, carY + 42, 40, 6); ctx.strokeRect(140, carY + 42, 40, 6);
-    ctx.fillText('0', 98, carY + 53); ctx.fillText('0.6', 135, carY + 53); ctx.fillText('1.2m', 178, carY + 53);
-    ctx.fillText('Folha: A4', 560, carY + 48);
+    ctx.fillStyle = '#3BAE52'; ctx.font = 'bold 14px Inter, sans-serif';
+    ctx.fillText('BEZERRA AMBIENTAL', 45, carY + 18);
+    ctx.fillStyle = '#111827'; ctx.font = 'bold 9px Inter, sans-serif';
+    ctx.fillText(`Projeto: ${projeto.nome || 'Avaliação Preliminar e Investigação Confirmatória'} (${projeto.numero || '-'})`, 35, carY + 38);
+    ctx.fillText(`Cliente: ${projeto.razaoSocial || projeto.nome || 'Viação Vicentini Ltda.'}`, 35, carY + 62);
+    ctx.fillText(`Endereço: ${projeto.endereco || projeto.gps || 'São Paulo - SP'}`, 35, carY + 78);
 
-    ctx.font = 'bold 9px Inter, sans-serif'; ctx.fillStyle = '#111827';
-    ctx.fillText(`Projeto: ${projeto.nome || 'Avaliação Preliminar e Investigação Confirmatória'} (${projeto.numero || '-'})`, 35, carY + 68);
-    ctx.fillText(`Cliente: ${projeto.razaoSocial || projeto.nome || 'Viação Vicentini Ltda.'}`, 35, carY + 86);
-    ctx.fillText(`Endereço: ${projeto.endereco || projeto.gps || 'São Paulo - SP'}`, 35, carY + 103);
+    ctx.fillStyle = '#111827'; ctx.font = 'bold 9px Inter, sans-serif';
+    ctx.fillText('Resp. Técnico: Bruno Bezerra (CREA/SP 5070672819)', baseW / 2 + 10, carY + 38);
+    ctx.font = 'bold 10px Inter, sans-serif';
+    ctx.fillText('FIGURA - Perfil Litológico das Sondagens/Poços', baseW / 2 + 10, carY + 68);
 
-    ctx.fillText('Resp. Técnico: Bruno Bezerra (CREA/SP 5070672819)', 630, carY + 86);
-    ctx.font = 'bold 10px Inter, sans-serif'; ctx.fillStyle = '#111827';
-    ctx.fillText('FIGURA - Perfil Litológico das Sondagens/Poços', 630, carY + 103);
-}
+    ctx.font = 'bold 9px Inter, sans-serif';
+    // Escala (agora na coluna direita)
+    ctx.fillStyle = '#111827';
+    ctx.font = 'bold 9px Inter, sans-serif';
+    // Escala (apenas texto, sem barra)
+    ctx.fillStyle = '#111827';
+    ctx.font = 'bold 9px Inter, sans-serif';
+    ctx.fillText('Escala: ', baseW / 2 + 10, carY + 18);
+    ctx.fillText('Folha: A4', baseW / 2 + 180, carY + 18);}
 
 // ========== EXPORTAÇÃO PDF ORGANIZADO COM PRETO PURO (#000000) E IMPRESSÃO DE 100% DOS DADOS ==========
 function gerarPDF() {
@@ -1662,6 +1717,19 @@ function gerarPDF() {
             return;
         }
         const doc = new jsPDFClass(); let y = 15;
+
+             function escreverLinha(texto, x = 14, tamanhoFonte = 9) {
+            const linhas = doc.splitTextToSize(String(texto || ''), 182);
+            if (y + (linhas.length * 5) > 285) {
+                doc.addPage();
+                desenharCabecalhoLogo(doc);
+                desenharRodapeDireitos(doc);
+                y = 35;
+            }
+            doc.setFontSize(tamanhoFonte);
+            doc.text(linhas, x, y);
+            y += linhas.length * 5 + 1;
+        }
 
         const executarAutoTable = (docInst, config) => {
             if (typeof docInst.autoTable === 'function') {
@@ -1687,7 +1755,7 @@ function gerarPDF() {
 
         function desenharRodapeDireitos(d) {
             d.setFont("helvetica", "normal"); d.setFontSize(7); d.setTextColor(59, 174, 82);
-            d.text("Todos os direitos reservados a Bezerra Ambiental (CNPJ: 29.165.656/0001-46) e Bruno Bezerra", 105, 290, { align: "center" });
+            d.text("Todos os direitos reservados a Bezerra Ambiental (CNPJ: 29.165.656/0001-46) e Bruno Bezerra (contato@bezerraambiental.com.br)", 105, 290, { align: "center" });
         }
 
         // PÁGINA 1: IDENTIFICAÇÃO DO PROJETO
@@ -1695,103 +1763,331 @@ function gerarPDF() {
         doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.setTextColor(0, 0, 0);
         doc.text("RELATÓRIO TÉCNICO DE CAMPO", 105, y, { align: "center" }); y += 12;
         doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
-        doc.text(`Projeto: ${p.nome} (${p.numero || '-'})`, 14, y); doc.text(`Data: ${p.data}`, 140, y); y += 6;
-        doc.text(`Técnico Responsável: ${p.tecnico}`, 14, y); doc.text(`GPS Principal: ${p.gps}`, 140, y); y += 6;
-        if (p.clima) { doc.text(`Condições Climáticas: ${p.clima}`, 14, y); y += 6; }
+        escreverLinha(`Projeto: ${p.nome} (${p.numero || '-'})`);
+	escreverLinha(`Data: ${p.data}`, 140);
+	// IIMPRESSÃO ANTERIOR doc.text(`Projeto: ${p.nome} (${p.numero || '-'})`, 14, y); doc.text(`Data: ${p.data}`, 140, y); y += 6;
+	escreverLinha(`Técnico Responsável: ${p.tecnico}`);
+	escreverLinha(`GPS Principal: ${p.gps}`, 140);
+        // IMPRESSÃO ANTERIOR doc.text(`Técnico Responsável: ${p.tecnico}`, 14, y); doc.text(`GPS Principal: ${p.gps}`, 140, y); y += 6;
+	if (p.clima) { escreverLinha(`Condições Climáticas: ${p.clima}`); }      
+// if (p.clima) { doc.text(`Condições Climáticas: ${p.clima}`, 14, y); y += 6; }
         doc.line(14, y, 196, y); y += 10;
 
-        // PÁGINA MCE (SE PREENCHIDO)
-        if (p.mce && (p.mce.cnae_principal || p.mce.area_total || p.mce.origem_agua)) {
+// Observações gerais do projeto
+if (p.obsProjeto) { escreverLinha(`Observações Gerais: ${p.obsProjeto}`); }
+
+// Documentação e Identificação Jurídica
+if (p.CNPJ) escreverLinha(`CNPJ: ${p.CNPJ}`);
+if (p.razaoSocial) escreverLinha(`Razão Social: ${p.razaoSocial}`);
+if (p.endereco) escreverLinha(`Endereço: ${p.endereco}`);
+const docCNAE = document.getElementById('projCNAE');
+if (docCNAE && docCNAE.value) escreverLinha(`CNAE: ${docCNAE.value}`);
+const docMatricula = document.getElementById('projMatricula');
+if (docMatricula && docMatricula.value) escreverLinha(`Matrícula do Imóvel: ${docMatricula.value}`);
+const docContratoSocial = document.getElementById('projContratoSocial');
+if (docContratoSocial && docContratoSocial.value) escreverLinha(`Contrato Social: ${docContratoSocial.value}`);
+const docProcuracao = document.getElementById('projProcuracao');
+if (docProcuracao && docProcuracao.value) escreverLinha(`Procuração: ${docProcuracao.value}`);
+const docCTFAPP = document.getElementById('projCTFAPP');
+if (docCTFAPP && docCTFAPP.value) escreverLinha(`CTF/APP: ${docCTFAPP.value}`);
+const docCAR = document.getElementById('projCAR');
+if (docCAR && docCAR.value) escreverLinha(`CAR: ${docCAR.value}`);
+
+// Observações gerais do projeto
+if (p.obsProjeto) { escreverLinha(`Observações Gerais: ${p.obsProjeto}`); }
+
+// Documentação e Identificação Jurídica
+if (p.CNPJ) escreverLinha(`CNPJ: ${p.CNPJ}`);
+if (p.razaoSocial) escreverLinha(`Razão Social: ${p.razaoSocial}`);
+if (p.endereco) escreverLinha(`Endereço: ${p.endereco}`);
+// Nota: os campos abaixo podem não existir no objeto p; verifique os nomes exatos no seu código.
+// Se houver outros IDs (como projCNAE, projMatricula etc.), use os mesmos nomes de propriedade.
+if (p.projCNAE) escreverLinha(`CNAE: ${p.projCNAE}`);
+if (p.projMatricula) escreverLinha(`Matrícula do Imóvel: ${p.projMatricula}`);
+if (p.projContratoSocial) escreverLinha(`Contrato Social: ${p.projContratoSocial}`);
+if (p.projProcuracao) escreverLinha(`Procuração: ${p.projProcuracao}`);
+if (p.projCTFAPP) escreverLinha(`CTF/APP: ${p.projCTFAPP}`);
+if (p.projCAR) escreverLinha(`CAR: ${p.projCAR}`);
+
+// Categoria do Projeto (checkboxes)
+let categorias = [];
+if (document.getElementById('chkGAC').checked) categorias.push('GAC');
+if (document.getElementById('chkLicenc').checked) categorias.push('Licenciamento');
+if (document.getElementById('chkCADRI').checked) categorias.push('CADRI');
+if (document.getElementById('chkISO').checked) categorias.push('ISO');
+if (categorias.length > 0) escreverLinha(`Categorias: ${categorias.join(', ')}`);
+
+                // PÁGINA MCE (COMPLETA)
+        if (p.mce && (p.mce.cnae_principal || p.mce.area_total || p.mce.origem_agua || document.getElementById('mce_cnae_principal').value)) {
             doc.addPage(); desenharCabecalhoLogo(doc); desenharRodapeDireitos(doc); y = 35;
             doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
             doc.text("MEMORIAL DE CARACTERIZAÇÃO DO EMPREENDIMENTO (MCE)", 14, y); y += 8;
             doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
-            if (p.mce.cnae_principal) { doc.text(`CNAE Principal: ${p.mce.cnae_principal}`, 14, y); y += 6; }
-            if (p.mce.area_total) { doc.text(`Área Total: ${p.mce.area_total} m²`, 14, y); y += 6; }
-            if (p.mce.origem_agua) { doc.text(`Origem da Água: ${p.mce.origem_agua}`, 14, y); y += 6; }
-            if (p.mce.obs) { doc.text(`Observações MCE: ${p.mce.obs}`, 14, y); y += 6; }
+
+            // Dados Cadastrais e Dimensionamento
+            escreverLinha(`CNAE Principal: ${p.mce.cnae_principal || document.getElementById('mce_cnae_principal').value || '-'}`);
+            escreverLinha(`CNAEs Secundários: ${document.getElementById('mce_cnae_secundarios').value || '-'}`);
+            escreverLinha(`Área Total do Terreno: ${p.mce.area_total || '-'} m²`);
+            escreverLinha(`Área Total Construída: ${document.getElementById('mce_area_construida').value || '-'} m²`);
+            escreverLinha(`Área Útil Ocupada: ${document.getElementById('mce_area_util').value || '-'} m²`);
+            escreverLinha(`Regime de Funcionamento: ${document.getElementById('mce_regime').value || '-'}`);
+            escreverLinha(`Quadro de Funcionários: ${document.getElementById('mce_funcionarios').value || '-'}`);
+
+            // Processo Produtivo e Equipamentos
+            escreverLinha(`Fluxograma de Produção: ${document.getElementById('mce_fluxograma').value || '-'}`);
+            escreverLinha(`Matérias-Primas: ${document.getElementById('mce_materias_primas').value || '-'}`);
+            escreverLinha(`Produtos Fabricados: ${document.getElementById('mce_produtos').value || '-'}`);
+            escreverLinha(`Maquinários: ${document.getElementById('mce_maquinarios').value || '-'}`);
+            escreverLinha(`Declaração de Ausência de Processos Críticos: ${document.getElementById('mce_declaracao_ausencia').checked ? 'Sim' : 'Não'}`);
+
+            // Recursos Hídricos, Efluentes e Saneamento
+            escreverLinha(`Origem da Água: ${p.mce.origem_agua || '-'}`);
+            escreverLinha(`Volume Consumo: ${document.getElementById('mce_consumo_agua').value || '-'} m³/mês`);
+            escreverLinha(`Efluentes Sanitários: ${document.getElementById('mce_efluentes_sanitarios').value || '-'}`);
+            escreverLinha(`Efluentes Industriais: ${document.getElementById('mce_efluentes_industriais').value || '-'}`);
+
+            // Gestão de Resíduos Sólidos e Passivos
+            escreverLinha(`Resíduos Classe I: ${document.getElementById('mce_residuos_classe1').value || '-'}`);
+            escreverLinha(`Resíduos Não Perigosos: ${document.getElementById('mce_residuos_nao_perigosos').value || '-'}`);
+            escreverLinha(`OLUC: ${document.getElementById('mce_oluc').value || '-'}`);
+            escreverLinha(`Acondicionamento Interno: ${document.getElementById('mce_acondicionamento').value || '-'}`);
+            escreverLinha(`Destinação Final Prevista: ${document.getElementById('mce_destinacao').value || '-'}`);
+
+            // Emissões Atmosféricas, Ruídos e Vibrações
+            escreverLinha(`Máquinas Ruído: ${document.getElementById('mce_maquinas_ruido').value || '-'}`);
+            escreverLinha(`Mitigação Ruído: ${document.getElementById('mce_mitigacao_ruido').value || '-'}`);
+            escreverLinha(`Chaminés / Exaustores: ${document.getElementById('mce_chamines').checked ? 'Sim' : 'Não'}`);
+            escreverLinha(`Filtros / Lavadores: ${document.getElementById('mce_filtros').checked ? 'Sim' : 'Não'}`);
+            escreverLinha(`Detalhamento Controle Emissões: ${document.getElementById('mce_detalhamento_emissoes').value || '-'}`);
+
+            // Registro fotográfico e observações
+            escreverLinha(`Registro Fotográfico MCE: ${p.mce.fotoRealizada ? 'Sim' : 'Não'}`);
+            if (p.mce.obs) escreverLinha(`Observações Gerais MCE: ${p.mce.obs}`);
         }
 
-        // PÁGINA VISTORIA (SE PREENCHIDO)
+// PÁGINA VISTORIA (COMPLETA)
         if (p.vistoria && p.vistoria.obs) {
             doc.addPage(); desenharCabecalhoLogo(doc); desenharRodapeDireitos(doc); y = 35;
             doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
             doc.text("VISTORIA AMBIENTAL", 14, y); y += 8;
             doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
-            doc.text(`Observações / Conclusão: ${p.vistoria.obs}`, 14, y); y += 6;
+
+            escreverLinha(`Observações / Conclusão: ${p.vistoria.obs}`);
+
+            // Licenciamento Ambiental
+            escreverLinha('--- Licenciamento Ambiental ---');
+            escreverLinha(`Licença Prévia (LP) válida: ${document.getElementById('v_lic_LP_validade').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_lic_LP_validade_obs').value || '-'}`);
+            escreverLinha(`Licença de Instalação (LI) válida: ${document.getElementById('v_lic_LI_validade').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_lic_LI_validade_obs').value || '-'}`);
+            escreverLinha(`Licença de Operação (LO) válida: ${document.getElementById('v_lic_LO_validade').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_lic_LO_validade_obs').value || '-'}`);
+            escreverLinha(`Condicionantes da LO pendentes: ${document.getElementById('v_lic_condicionantes').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_lic_condicionantes_obs').value || '-'}`);
+            escreverLinha(`CTF/APP ativo: ${document.getElementById('v_lic_CTFAPP').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_lic_CTFAPP_obs').value || '-'}`);
+            escreverLinha(`RAPP entregue: ${document.getElementById('v_lic_RAPP').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_lic_RAPP_obs').value || '-'}`);
+
+            // Águas e Efluentes
+            escreverLinha('--- Águas e Efluentes ---');
+            escreverLinha(`Outorga válida: ${document.getElementById('v_efluentes_outorga').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_efluentes_outorga_obs').value || '-'}`);
+            escreverLinha(`ETE/SAO operante: ${document.getElementById('v_efluentes_ETE').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_efluentes_ETE_obs').value || '-'}`);
+            escreverLinha(`Ligação rede pública: ${document.getElementById('v_efluentes_rede').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_efluentes_rede_obs').value || '-'}`);
+            escreverLinha(`Possui fossa: ${document.getElementById('v_efluentes_fossa').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_efluentes_fossa_obs').value || '-'}`);
+
+            // Resíduos Sólidos (PGRS/CADRI)
+            escreverLinha('--- Resíduos Sólidos (PGRS/CADRI) ---');
+            escreverLinha(`PGRS atualizado: ${document.getElementById('v_res_PGRS_atualizado').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_res_PGRS_atualizado_obs').value || '-'}`);
+            escreverLinha(`Resíduos Classe I: ${document.getElementById('v_res_ClasseI').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_res_ClasseI_obs').value || '-'}`);
+            escreverLinha(`CADRI válido: ${document.getElementById('v_res_CADRI').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_res_CADRI_obs').value || '-'}`);
+            escreverLinha(`MTR/SIGOR ativo: ${document.getElementById('v_res_MTR').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_res_MTR_obs').value || '-'}`);
+
+            // Solo e Água Subterrânea (GAC)
+            escreverLinha('--- Solo e Água Subterrânea (GAC) ---');
+            escreverLinha(`Histórico contaminação: ${document.getElementById('v_gac_historico').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_gac_historico_obs').value || '-'}`);
+            escreverLinha(`Tanques enterrados/aéreos: ${document.getElementById('v_gac_tanques').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_gac_tanques_obs').value || '-'}`);
+            escreverLinha(`Poços instalados: ${document.getElementById('v_gac_pocos').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_gac_pocos_obs').value || '-'}`);
+            escreverLinha(`Fase livre detectada: ${document.getElementById('v_gac_fase_livre').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_gac_fase_livre_obs').value || '-'}`);
+            escreverLinha(`Interferentes Subterrâneos: ${document.getElementById('v_gac_interferentes').checked ? 'Sim' : 'Não'} - Obs: ${document.getElementById('v_gac_interferentes_obs').value || '-'}`);
+
+            // Aspectos Ambientais Personalizados
+            const aspectos = document.querySelectorAll('#containerAspectosLivres .l-tit');
+            if (aspectos.length > 0) {
+                escreverLinha('--- Aspectos Personalizados ---');
+                aspectos.forEach(tit => {
+                    const obs = tit.nextElementSibling;
+                    escreverLinha(`${tit.value}: ${obs ? obs.value : '-'}`);
+                });
+            }
+
+            // Registro Fotográfico
+            escreverLinha(`Registro Fotográfico Vistoria: ${p.vistoria.fotoRealizada ? 'Sim' : 'Não'}`);
         }
 
-        // PÁGINA ARBÓREO (SE HOUVER EXEMPLARES)
+// PÁGINA ARBÓREO (COMPLETA)
         if (p.arboreo && p.arboreo.length > 0) {
             doc.addPage(); desenharCabecalhoLogo(doc); desenharRodapeDireitos(doc); y = 35;
             doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
             doc.text("LEVANTAMENTO ARBÓREO (DENDROMETRIA)", 14, y); y += 8;
-            let arbRows = p.arboreo.map(a => [a.id, a.nome || '-', a.cap || '-', a.dap || '-', a.estado || '-', a.manejo || '-']);
-            executarAutoTable(doc, { startY: y, head: [['ID', 'Espécie', 'CAP (cm)', 'DAP (cm)', 'Estado', 'Manejo']], body: arbRows });
+            let arbRows = p.arboreo.map(a => [
+                a.id, a.nome || '-', a.cientifico || '-', a.origem || '-',
+                a.cap || '-', a.dap || '-', a.altura || '-', a.copa || '-',
+                a.estado || '-', a.manejo || '-', a.gps || '-',
+                a.fotoRealizada ? 'Sim' : 'Não', a.obs || '-'
+            ]);
+            executarAutoTable(doc, {
+                startY: y,
+                head: [['ID', 'Espécie', 'Nome Cient.', 'Origem', 'CAP', 'DAP', 'Altura', 'Copa', 'Estado', 'Manejo', 'GPS', 'Foto', 'Obs']],
+                body: arbRows,
+                styles: { fontSize: 7, cellPadding: 2 }
+            });
         }
 
-        // PÁGINA SONDAGENS / RESUMO & AMOSTRAS DE SOLO
+        // PÁGINA SONDAGENS (COMPLETA)
         if (p.sondagens && p.sondagens.length > 0) {
             doc.addPage(); desenharCabecalhoLogo(doc); desenharRodapeDireitos(doc); y = 35;
             doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
             doc.text("RESUMO DAS SONDAGENS EXECUTADAS (ST) E AMOSTRAS DE SOLO", 14, y); y += 8;
+
             p.sondagens.forEach(s => {
                 doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(0, 0, 0);
-                doc.text(`${s.id} | Prof. Total: ${s.profTotal}m | GPS: ${s.gps || p.gps}`, 14, y); y += 5;
+                escreverLinha(`${s.id} | Prof. Total: ${s.profTotal}m | GPS: ${s.gps || p.gps}`);
                 doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(0, 0, 0);
-                if (s.camadas) s.camadas.forEach(c => { doc.text(` • Camada ${c.ini}-${c.fim}m: ${c.desc} (${c.lit?.cor || 'Munsell'})`, 14, y); y += 4; });
-                if (s.amostrasSolo && s.amostrasSolo.length > 0) {
-                    s.amostrasSolo.forEach(a => { doc.text(`   [Amostra Solo] ${a.id} (${a.prof}m) - SQIs: ${a.sqi}`, 14, y); y += 4; });
+
+                // Camadas (com detalhes de litologia)
+                if (s.camadas) s.camadas.forEach(c => {
+                    escreverLinha(` • Camada ${c.ini}-${c.fim}m: ${c.desc} (${c.lit?.cor || 'Munsell'})`);
+                    escreverLinha(`   Argila: ${c.lit?.argila ? 'Sim' : 'Não'}, Silte: ${c.lit?.silte ? 'Sim' : 'Não'}, Areia: ${c.lit?.areia ? 'Sim' : 'Não'}, Seixos: ${c.lit?.seixos ? 'Sim' : 'Não'}`);
+                });
+
+                // Leituras PID (4 colunas)
+                if (s.pids && s.pids.length > 0) {
+                    let rows = [];
+                    for (let i = 0; i < s.pids.length; i += 2) {
+                        rows.push([
+                            s.pids[i].prof, s.pids[i].val,
+                            s.pids[i+1] ? s.pids[i+1].prof : '',
+                            s.pids[i+1] ? s.pids[i+1].val : ''
+                        ]);
+                    }
+                    executarAutoTable(doc, {
+                        startY: y,
+                        head: [['Prof. (m)', 'PID (ppm)', 'Prof. (m)', 'PID (ppm)']],
+                        body: rows,
+                        theme: 'grid',
+                        styles: { fontSize: 8 }
+                    });
+                    y = doc.lastAutoTable.finalY + 8;
+			doc.setTextColor(0, 0, 0);
                 }
-                y += 4;
+
+                 // Amostras de solo
+                if (s.amostrasSolo && s.amostrasSolo.length > 0) {
+                    s.amostrasSolo.forEach(a => {
+                        escreverLinha(`   [Amostra Solo] ${a.id} (${a.prof}m) - SQIs: ${a.sqi}`);
+                    });
+                }
+
+                // Instalação de Poço (se houver)
+                if (s.pocoInstalado && s.pocoInstalado.nome) {
+                    escreverLinha(`Poço Instalado: ${s.pocoInstalado.nome}`);
+                    escreverLinha(`   Profundidade: ${s.pocoInstalado.prof}m`);
+                    escreverLinha(`   Filtro: ${s.pocoInstalado.fIni}m a ${s.pocoInstalado.fFim}m`);
+                    escreverLinha(`   Acabamento: ${s.pocoInstalado.acabamento}`);
+                    escreverLinha(`   Selo Bentonita: ${s.pocoInstalado.seloBentonita}m`);
+                }
+
+                // Equipamentos e calibração
+                escreverLinha(`Equipamentos Descontaminados: ${s.descontaminado ? 'Sim' : 'Não'}`);
+                escreverLinha(`PID Calibrado: ${s.pidCalibrado ? 'Sim' : 'Não'}`);
+
+                // Registro fotográfico
+                escreverLinha(`Registro Fotográfico: ${s.fotoRealizada ? 'Sim' : 'Não'}`);
+
+                // Observações gerais da sondagem
+                doc.setTextColor(0, 0, 0); // garante preto
+                if (s.obs) escreverLinha(`Obs: ${s.obs}`);
+
+                y += 4; // espaço extra entre sondagens
             });
         }
 
-        // PÁGINA POÇOS D'ÁGUA & AMOSTRAS DE ÁGUA SUBTERRÂNEA
+        // PÁGINA POÇOS D'ÁGUA (COMPLETA)
         if (p.pms && p.pms.length > 0) {
             doc.addPage(); desenharCabecalhoLogo(doc); desenharRodapeDireitos(doc); y = 35;
             doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
             doc.text("POÇOS DE MONITORAMENTO DE ÁGUA (PM) E AMOSTRAS DE ÁGUA", 14, y); y += 8;
             p.pms.forEach(pm => {
                 doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(0, 0, 0);
-                doc.text(`Poço: ${pm.id} | Prof: ${pm.prof}m | NA: ${pm.na}m | Fase Livre: ${pm.temFase ? pm.fase + 'cm' : 'Não'}`, 14, y); y += 5;
+                escreverLinha(`Poço: ${pm.id} | Prof: ${pm.prof}m | NA: ${pm.na}m | Fase Livre: ${pm.temFase ? pm.fase + 'cm' : 'Não'}`);
                 doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(0, 0, 0);
+
+                // Coordenadas GPS
+                escreverLinha(`Coordenadas GPS: ${pm.gps || p.gps}`);
+
+                // Características Construtivas
+                escreverLinha(`Revest. PVC: ${pm.revestPVC ? 'Sim' : 'Não'}, Revest. Inox: ${pm.revestInox ? 'Sim' : 'Não'}, Selo Sanitário: ${pm.selo ? 'Sim' : 'Não'}, Tampa com cadeado: ${pm.tampa ? 'Sim' : 'Não'}`);
+
+                // Amostras de água
                 if (pm.amostrasAgua && pm.amostrasAgua.length > 0) {
-                    pm.amostrasAgua.forEach(a => { doc.text(`   [Amostra Água] ${a.id} - Parâmetros: ${a.param}`, 14, y); y += 4; });
+                    pm.amostrasAgua.forEach(a => { escreverLinha(`   [Amostra Água] ${a.id} - Parâmetros: ${a.param}`); });
                 }
+
+                // Registro Fotográfico
+                escreverLinha(`Registro Fotográfico: ${pm.fotoRealizada ? 'Sim' : 'Não'}`);
+
+                // Observações Gerais
+                if (pm.obs) escreverLinha(`Obs: ${pm.obs}`);
+
                 y += 4;
             });
         }
 
-        // PÁGINA POÇOS DE VAPOR / AR & AMOSTRAS DE VAPOR
+        // PÁGINA POÇOS DE VAPOR / AR (COMPLETA)
         if (p.vapores && p.vapores.length > 0) {
             doc.addPage(); desenharCabecalhoLogo(doc); desenharRodapeDireitos(doc); y = 35;
             doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
             doc.text("POÇOS DE VAPOR / SUB-SLAB / AR AMBIENTE (PV / SS / AA)", 14, y); y += 8;
             p.vapores.forEach(v => {
                 doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(0, 0, 0);
-                doc.text(`Ponto: ${v.id} | Tipo: ${v.tipo} | Prof: ${v.prof}m | PID: ${v.pid} PPM`, 14, y); y += 5;
+                escreverLinha(`Ponto: ${v.id} | Tipo: ${v.tipo} | Prof: ${v.prof}m | PID: ${v.pid} PPM`);
                 doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(0, 0, 0);
+
+                // Coordenadas GPS
+                escreverLinha(`Coordenadas GPS: ${v.gps || p.gps}`);
+
+                // Amostras de vapor
                 if (v.amostrasVapor && v.amostrasVapor.length > 0) {
-                    v.amostrasVapor.forEach(a => { doc.text(`   [Amostra Vapor] ${a.id} (Método: ${a.metodo}) - Parâmetros: ${a.param}`, 14, y); y += 4; });
+                    v.amostrasVapor.forEach(a => { escreverLinha(`   [Amostra Vapor] ${a.id} (Método: ${a.metodo}) - Parâmetros: ${a.param}`); });
                 }
+
+                // Registro Fotográfico
+                escreverLinha(`Registro Fotográfico: ${v.fotoRealizada ? 'Sim' : 'Não'}`);
+
+                // Observações Gerais
+                if (v.obs) escreverLinha(`Obs: ${v.obs}`);
+
                 y += 4;
             });
         }
 
-        // PÁGINA SLUG TEST (SE HOUVER ENSAIOS)
+        // PÁGINA SLUG TEST (COMPLETA)
         if (p.ensaios && p.ensaios.length > 0) {
             doc.addPage(); desenharCabecalhoLogo(doc); desenharRodapeDireitos(doc); y = 35;
             doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
             doc.text("ENSAIO DE PERMEABILIDADE (SLUG TEST)", 14, y); y += 8;
             p.ensaios.forEach(ens => {
                 doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(0, 0, 0);
-                doc.text(`Poço: ${ens.pocoId} | Tipo: ${ens.tipo} | NA Estab: ${ens.naE}m | NA Inicial: ${ens.naT}m`, 14, y); y += 6;
+                escreverLinha(`Poço: ${ens.pocoId} | Tipo: ${ens.tipo} | NA Estab: ${ens.naE}m | NA Inicial: ${ens.naT}m`);
+                doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(0, 0, 0);
+
+                // Diâmetros e comprimento do filtro
+                escreverLinha(`Diâm. Perf.: ${ens.dPerf}m, Diâm. Filtro: ${ens.dFiltro}m, Comp. Filtro: ${ens.L}m`);
+
+                // Leituras de tempo
                 if (ens.leituras && ens.leituras.length > 0) {
                     let slugRows = ens.leituras.map(l => [l.tempo || '-', l.na || '-']);
                     executarAutoTable(doc, { startY: y, head: [['Tempo', "Nível d'Água (m)"]], body: slugRows });
                     y = doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : y + 30;
                 }
+
+                // Observações do ensaio
+                if (ens.obs) escreverLinha(`Obs: ${ens.obs}`);
             });
         }
 
@@ -1826,7 +2122,7 @@ function gerarPDF() {
     }
 }
 
-function exportarExcel() {
+/* function exportarExcel() {
     try {
         salvarCapaProjeto(); const p = obterProjetoAtivo();
         if (!p) { alert("Nenhum projeto ativo selecionado."); return; }
@@ -1837,7 +2133,7 @@ function exportarExcel() {
             // 1. Capa
             let capaData = [
                 ["Projeto", p.nome], ["Número", p.numero], ["Data", p.data], ["Técnico", p.tecnico], ["GPS", p.gps],
-                ["Rodapé", "Todos os direitos reservados a Bezerra Ambiental (CNPJ: 29.165.656/0001-46) e Bruno Bezerra"]
+                ["Rodapé", "Todos os direitos reservados a Bezerra Ambiental (CNPJ: 29.165.656/0001-46) e Bruno Bezerra (contato@bezerraambiental.com.br"]
             ];
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(capaData), "Capa_Projeto");
 
@@ -1944,7 +2240,7 @@ function exportarExcel() {
         console.error(err);
         alert("Erro ao exportar Excel: " + err.message);
     }
-}
+} */
 
 function exportarKML() {
     try {
@@ -2055,13 +2351,38 @@ function gerarRelatorioHTMLImpressao(p) {
         h += `</table>`;
     }
 
-    h += `<hr/><p style="font-size:10px;color:#3BAE52;text-align:center;">Todos os direitos reservados a Bezerra Ambiental (CNPJ: 29.165.656/0001-46) e Bruno Bezerra</p></body></html>`;
+    h += `<hr/><p style="font-size:10px;color:#3BAE52;text-align:center;">Todos os direitos reservados a Bezerra Ambiental (CNPJ: 29.165.656/0001-46) e Bruno Bezerra (contato@bezerraambiental.com.br) </p></body></html>`;
     w.document.write(h); w.document.close();
     setTimeout(() => { w.print(); }, 500);
 }
 
-function exportarWhatsApp() { const p = obterProjetoAtivo(); if (!p) return; window.open(`https://wa.me/?text=${encodeURIComponent(`*BEZERRA COLETA*\nProjeto: ${p.nome}\nData: ${p.data}`)}`, '_blank'); }
-function exportarEmail() { const p = obterProjetoAtivo(); if (!p) return; window.location.href = `mailto:?subject=Dados - ${p.nome}&body=Projeto: ${p.nome}`; }
+// function exportarWhatsApp() { const p = obterProjetoAtivo(); if (!p) return; window.open(`https://wa.me/?text=${encodeURIComponent(`*BEZERRA COLETA*\nProjeto: ${p.nome}\nData: ${p.data}`)}`, '_blank'); }
+// function exportarEmail() { const p = obterProjetoAtivo(); if (!p) return; window.location.href = `mailto:?subject=Dados - ${p.nome}&body=Projeto: ${p.nome}`; }
+
+/*	function exportarWhatsApp() {
+    const p = obterProjetoAtivo(); if (!p) return;
+    let t = `*BEZERRA COLETA*\nProjeto: ${p.nome}\nData: ${p.data}\nTécnico: ${p.tecnico}\nGPS: ${p.gps}\n\n`;
+    if (p.sondagens) p.sondagens.forEach(s => {
+        t += `*${s.id}* – ${s.profTotal}m\n`;
+        (s.camadas || []).forEach(c => t += `  • ${c.ini}-${c.fim}m: ${c.desc}\n`);
+    });
+    if (p.pms) p.pms.forEach(pm => {
+        t += `*${pm.id}* – NA: ${pm.na}m, Prof: ${pm.prof}m\n`;
+    });
+    window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank');
+} */
+
+/* function exportarEmail() {
+    const p = obterProjetoAtivo(); if (!p) return;
+    let corpo = `Projeto: ${p.nome}%0D%0AData: ${p.data}%0D%0ATécnico: ${p.tecnico}%0D%0AGPS: ${p.gps}%0D%0A%0D%0A`;
+    if (p.sondagens) p.sondagens.forEach(s => {
+        corpo += `${s.id} – ${s.profTotal}m%0D%0A`;
+        (s.camadas || []).forEach(c => corpo += `  • ${c.ini}-${c.fim}m: ${c.desc}%0D%0A`);
+    });
+    window.location.href = `mailto:?subject=Dados - ${p.nome}&body=${corpo}`;
+} */
+
+
 function exportarJSON() { const p = obterProjetoAtivo(); if (!p) return; const blob = new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Backup_${p.nome.replace(/\s+/g, '_')}.json`; a.click(); showToast("Backup JSON Baixado"); }
 </script>
 </body>
